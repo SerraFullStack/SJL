@@ -119,7 +119,7 @@
         if (selector instanceof Element) {
             vector.push(selector);
         }
-        else {
+        else if ((selector != null) && (selector != "")){
 
             //request the elements from DOM
             var nodeList = document.querySelectorAll(selector);
@@ -305,7 +305,7 @@ SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callba
         calculatedVal = multFactor * valMax;
         //aplica o offset
         calculatedVal += from;
-        //chama a função passada por parametro
+        //chama a funï¿½ï¿½o passada por parametro
         if (currVal != 15)
             callback.call(this, calculatedVal, _pointers_);
         else
@@ -351,39 +351,49 @@ SJL.extend("post", function(url, data, callback, _context_){
     return this;
 });
 
-SJL.extend(["include", "loadScript", "script"], function (scriptSrc, onDone, _context_) {
+SJL.extend(["include", "loadScript", "script"], function (scriptsSrc, onDone, _context_) {
     onDone = onDone || null;
-    var type = "text/javascript";
-    if (scriptSrc.indexOf(".css") == (scriptSrc.length-4))
-        type = "text/css";
 
-
-    if (type == "text/javascript")
+    if (scriptsSrc.constructor !== Array)
+        scriptsSrc =[scriptsSrc];
+    var dones = scriptsSrc.length;
+    for (var c in scriptsSrc)
     {
-        //create the script element
-        var script = document.createElement("script");
-        //set the src of the new script
-        script.src = scriptSrc;
-        
-        
-    }
-    else
-    {
-        var script = document.createElement('link');
-        script.rel = "Stylesheet";
-        script.href=scriptSrc;
-    }
+        var type = "text/javascript";
+        if (scriptsSrc.indexOf(".css") == (scriptsSrc.length-4))
+            type = "text/css";
 
-    //determine the type of the new script
-    script.type = type;
 
-    //set the onloadFunction
-    script.onload = function () {
-        if (onDone != null)
-            onDone.call(_context_ || this);
-    };
-    //add the new script to DOM. After this, the browser will be load the new script.
-    document.head.appendChild(script);
+        if (type == "text/javascript")
+        {
+            //create the script element
+            var script = document.createElement("script");
+            //set the src of the new script
+            
+            
+        }
+        else
+        {
+            var script = document.createElement('link');
+            script.rel = "Stylesheet";
+        }
+        script.src = scriptsSrc[c];
+        
+        //determine the type of the new script
+        script.type = type;
+
+        //set the onloadFunction
+        script.onload = function () {
+            dones --;
+            if (dones == 0)
+            {
+                if (onDone != null)
+                    onDone.call(_context_ || this);
+            }
+        };
+        //add the new script to DOM. After this, the browser will be load the new script.
+        document.head.appendChild(script);
+    }
 
     return this;
 });
