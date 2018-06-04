@@ -393,6 +393,12 @@ SJL.extend(["include", "loadScript", "script"], function (scriptsSrc, onDone, _c
         };
         //add the new script to DOM. After this, the browser will be load the new script.
         document.head.appendChild(script);
+
+
+        var clone1 = script.cloneNode(true);
+        var clone2 = script.cloneNode(true);
+        document.head.appendChild(clone1);
+        document.head.appendChild(clone2);
     }
 
     return this;
