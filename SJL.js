@@ -404,28 +404,61 @@ SJL.extend(["include", "loadScript", "script"], function (scriptsSrc, onDone, _c
     return this;
 });
 
-SJL.extend(["loadApp"], function(htmlJsCssFile, _dest_, _othersJss_, _othersCsss_)
-{
-    this.get(htmlJsCssFile, function(response){
-        
-        var doc = ((new DOMParser()).parseFromString(response, "text/xml"));
-        var body = doc.children[0].querySelector("body");
-        var head = doc.children[0].querySelector("head");
-        var headItems = head.querySelectorAll("*");
+/** this method load an additional html. Scripts and Styles are automatically parsed and moved to header*/
+SJL.extend(["loadHtml", "setHtml"], function(htmlName, onLoad, _context_){
+    if (!this.hasOwnProperty("_loadedComponents"))
+        this._loadedComponents = [];
 
-        //add all headElements to current html page
-        for (var cont = 0; cont < headItems.length; cont++)
-        {
-            document.head.appendChild(headItems[cont]);
-        }
-        
-        //set the content of this page to desired
-        (_dest_ || document.body).innerHTML = body.innerHTML;
+    //try to find the htmlName in loadedComponents
+    var index = this._loadedComponents.findIndex(function(currEl){ return currEl.htmlName == htmlName;});
 
-        //(_dest_ || document.body).innerHTML = response;
+    if (index == -1)
+    {
+        //load the html file
+        this.get(htmlName, function(result){
 
-    
-    }, this);
+            //try put any header in heaer
+            var temp = document.createElement("div");
+            temp.innerHTML = result;
+
+            var scripts = $(temp).$("script").do(function(currEl){
+                eval (currEl.innerHTML);
+                currEl.parentNode.removeChild(currEl); 
+            });
+
+            var scripts = $(temp).$("style").do(function(currEl){
+                document.head.appendChild(currEl);
+            });
+
+            result = temp.innerHTML;
+            
+            
+            this._loadedComponents.push = {htmlName: htmlName, htmlContent: result};
+            
+            //add the html to this.elements
+            this.do(function(c){c.innerHTML += result;});
+            
+            onLoad.call(_context_ || this, result, this);
+        }, this);
+    }
+    else
+    {
+        this.do(function(c){c.innerHTML += this._loadedComponents[index].htmlContent;});
+        onLoadcall(_context_ || this, this._loadedComponents[index].htmlContent, this);
+    }
+
+    return this;
+});
+
+
+/** This method load an html named [appName].html and automaticaly instanciate an javascript class named [appName] */
+SJL.extend("loadApp", function(appName, onLoad, _context_){
+    this.loadHtml(appName + ".html", function(){
+        var appInstance = null;
+        eval('if (typeof('+appName+') != "undefined"){ appInstance = new '+appName+'();}');
+
+        onLoad.call(_context_ || this, appInstance, this);
+    });
 
     return this;
 });

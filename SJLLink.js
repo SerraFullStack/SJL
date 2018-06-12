@@ -86,7 +86,7 @@ new (function (){
                         eval (gloabalElName + "=el");
                         this.watches.push(new Watch(gloabalElName + ".value", function(newValue, args){
                             eval (arga.variableNames[0] + " = newValue +'';");
-                        }, this, {originalValue: originalValue, variableNames: variableNames, el: el, curr:curr}))}, this, {originalValue: originalValue, variableNames: variableNames, el: el, curr:curr}));
+                        }, this, {originalValue: originalValue, variableNames: variableNames, el: el, curr:curr}));
 
                     }
                 }
