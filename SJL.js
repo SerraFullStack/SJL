@@ -405,9 +405,10 @@ SJL.extend(["include", "loadScript", "script"], function (scriptsSrc, onDone, _c
 });
 
 /** this method load an additional html. Scripts and Styles are automatically parsed and moved to header*/
-SJL.extend(["loadHtml", "setHtml"], function(htmlName, onLoad, _context_){
+SJL.extend(["loadHtml", "setHtml"], function(htmlName, onLoad, _clearHtml_, _context_){
     if (!this.hasOwnProperty("_loadedComponents"))
         this._loadedComponents = [];
+	
 
     //try to find the htmlName in loadedComponents
     var index = this._loadedComponents.findIndex(function(currEl){ return currEl.htmlName == htmlName;});
@@ -435,6 +436,13 @@ SJL.extend(["loadHtml", "setHtml"], function(htmlName, onLoad, _context_){
             
             this._loadedComponents.push = {htmlName: htmlName, htmlContent: result};
             
+			//checks if to be clear the html
+			_clearHtml_ = _clearHtml_ || "NotClear";
+			if (_clearHtml_ === true)
+			{
+				this.setProperty("innerHTML", "");
+			}
+			
             //add the html to this.elements
             this.do(function(c){c.innerHTML += result;});
             
@@ -452,13 +460,13 @@ SJL.extend(["loadHtml", "setHtml"], function(htmlName, onLoad, _context_){
 
 
 /** This method load an html named [appName].html and automaticaly instanciate an javascript class named [appName] */
-SJL.extend("loadApp", function(appName, onLoad, _context_){
-    this.loadHtml(appName + ".html", function(){
+SJL.extend("loadApp", function(appName, onLoad, _clearHtml_, _context_){
+	this.loadHtml(appName + ".html", function(){
         var appInstance = null;
         eval('if (typeof('+appName+') != "undefined"){ appInstance = new '+appName+'();}');
 
         onLoad.call(_context_ || this, appInstance, this);
-    });
+    }, _clearHtml_);
 
     return this;
 });
