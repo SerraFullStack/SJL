@@ -437,8 +437,8 @@ SJL.extend(["loadHtml", "setHtml"], function(htmlName, onLoad, _clearHtml_, _con
             this._loadedComponents.push = {htmlName: htmlName, htmlContent: result};
             
 			//checks if to be clear the html
-			_clearHtml_ = _clearHtml_ || "NotClear";
-			if (_clearHtml_ === true)
+			
+			if ((typeof(_clearHtml_) == 'undefined') || (_clearHtml_ == true))
 			{
 				this.setProperty("innerHTML", "");
 			}
