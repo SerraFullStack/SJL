@@ -460,10 +460,11 @@ SJL.extend(["loadHtml", "setHtml"], function(htmlName, onLoad, _clearHtml_, _con
 
 
 /** This method load an html named [appName].html and automaticaly instanciate an javascript class named [appName] */
-SJL.extend("loadApp", function(appName, onLoad, _clearHtml_, _context_){
+SJL.extend("loadApp", function(appName, onLoad, appArgumentsArray, _clearHtml_, _context_){
 	this.loadHtml(appName + ".html", function(){
         var appInstance = null;
-        eval('if (typeof('+appName+') != "undefined"){ appInstance = new '+appName+'();}');
+		appArgumentsArray = appArgumentsArray || null;
+        eval('if (typeof('+appName+') != "undefined"){ appInstance = new '+appName+'(appArgumentsArray);}');
 
         onLoad.call(_context_ || this, appInstance, this);
     }, _clearHtml_);
