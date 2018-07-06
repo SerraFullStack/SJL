@@ -405,7 +405,7 @@ SJL.extend(["include", "loadScript", "script"], function (scriptsSrc, onDone, _c
 });
 
 /** this method load an additional html. Scripts and Styles are automatically parsed and moved to header*/
-SJL.extend(["loadHtml", "setHtml"], function(htmlName, onLoad, _clearHtml_, _context_){
+SJL.extend(["loadHtml", "setHtml", "loadComponent"], function(htmlName, onLoad, _clearHtml_, _context_){
     if (!this.hasOwnProperty("_loadedComponents"))
         this._loadedComponents = [];
 	
@@ -461,10 +461,30 @@ SJL.extend(["loadHtml", "setHtml"], function(htmlName, onLoad, _clearHtml_, _con
 
 /** This method load an html named [appName].html and automaticaly instanciate an javascript class named [appName] */
 SJL.extend("loadApp", function(appName, onLoad, appArgumentsArray, _clearHtml_, _context_){
+	//checks by old running app and notify them	
+	if (this.elements[0].hasOwnProperty("SJL_CurrAPP"))
+	{
+		var app = this.elements[0].SJL_CurrAPP;
+		if (app.hasOwnProperty("destructor"))
+			app.destructor();
+		if (app.hasOwnProperty("stop"))
+			app.stop();
+		if (app.hasOwnProperty("release"))
+			app.release();
+		if (app.hasOwnProperty("free"))
+			app.free();
+		if (app.hasOwnProperty("destroy"))
+			app.destroy();
+		if (app.hasOwnProperty("dispose"))
+			app.dispose();
+	};
+	
 	this.loadHtml(appName + ".html", function(){
         var appInstance = null;
 		appArgumentsArray = appArgumentsArray || null;
         eval('if (typeof('+appName+') != "undefined"){ appInstance = new '+appName+'(appArgumentsArray);}');
+		
+		this.elements[0].SJL_CurrAPP = appInstance;
 
         onLoad.call(_context_ || this, appInstance, this);
     }, _clearHtml_);
