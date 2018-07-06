@@ -427,7 +427,7 @@ SJL.extend(["loadHtml", "setHtml", "loadComponent"], function(htmlName, onLoad, 
                 currEl.parentNode.removeChild(currEl); 
             });
 
-            var scripts = $(temp).$("style").do(function(currEl){
+            var css = $(temp).$("style").do(function(currEl){
                 document.head.appendChild(currEl);
             });
 
@@ -507,6 +507,23 @@ SJL.extend(["delete", "exclude"], function () {
 
     return this;
 
+});
+
+
+SJL.extend("getCssProperty", function(propertyName){
+    var result = [];
+    for (var c in this.elements)
+    {
+        var tempElement = this.elements[c];
+        var value = null;
+        eval ("value = window.getComputedStyle(tempElement)."+propertyName);
+        result.push(value);
+    }
+
+    if (result.length == 1)
+        return result[0];
+    else
+        return result;
 });
 
 
