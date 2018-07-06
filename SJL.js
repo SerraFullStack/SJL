@@ -405,54 +405,57 @@ SJL.extend(["include", "loadScript", "script"], function (scriptsSrc, onDone, _c
 });
 
 /** this method load an additional html. Scripts and Styles are automatically parsed and moved to header*/
-SJL.extend(["loadHtml", "setHtml", "loadComponent"], function(htmlName, onLoad, _clearHtml_, _context_){
-    if (!this.hasOwnProperty("_loadedComponents"))
-        this._loadedComponents = [];
-	
+SJL.extend("loadHtmlText", function(htmlText, onLoad, _clearHtml, _context_)
+{
+    //try put any header in heaer
+    var temp = document.createElement("div");
+    temp.innerHTML = htmlText;
 
+    var scripts = $(temp).$("script").do(function(currEl){
+        eval (currEl.innerHTML);
+        currEl.parentNode.removeChild(currEl); 
+    });
+
+    var css = $(temp).$("style").do(function(currEl){
+        document.head.appendChild(currEl);
+    });
+
+    htmlText = temp.innerHTML;
+    
+    
+    //checks if to be clear the html
+    
+    if ((typeof(_clearHtml_) == 'undefined') || (_clearHtml_ == true))
+    {
+        this.setProperty("innerHTML", "");
+    }
+    
+    //add the html to this.elements
+    this.do(function(c){c.innerHTML += htmlText;});
+    
+    onLoad.call(_context_ || this, htmlText, this);
+})
+SJL.extend(["loadHtml", "setHtml", "loadComponent"], function(htmlName, onLoad, _clearHtml_, _context_){
+    if (!SJL.hasOwnProperty("_loadedComponents"))
+        SJL._loadedComponents = [];
+    
+    
     //try to find the htmlName in loadedComponents
-    var index = this._loadedComponents.findIndex(function(currEl){ return currEl.htmlName == htmlName;});
+    var index = SJL._loadedComponents.findIndex(function(currEl){ 
+        return currEl.htmlName == htmlName;
+    });
 
     if (index == -1)
     {
         //load the html file
         this.get(htmlName, function(result){
-
-            //try put any header in heaer
-            var temp = document.createElement("div");
-            temp.innerHTML = result;
-
-            var scripts = $(temp).$("script").do(function(currEl){
-                eval (currEl.innerHTML);
-                currEl.parentNode.removeChild(currEl); 
-            });
-
-            var css = $(temp).$("style").do(function(currEl){
-                document.head.appendChild(currEl);
-            });
-
-            result = temp.innerHTML;
-            
-            
-            this._loadedComponents.push = {htmlName: htmlName, htmlContent: result};
-            
-			//checks if to be clear the html
-			
-			if ((typeof(_clearHtml_) == 'undefined') || (_clearHtml_ == true))
-			{
-				this.setProperty("innerHTML", "");
-			}
-			
-            //add the html to this.elements
-            this.do(function(c){c.innerHTML += result;});
-            
-            onLoad.call(_context_ || this, result, this);
+            SJL._loadedComponents.push({htmlName: htmlName, htmlContent: result});
+            this.loadHtmlText(result, onLoad, _clearHtml_, _context_);
         }, this);
     }
     else
     {
-        this.do(function(c){c.innerHTML += this._loadedComponents[index].htmlContent;});
-        onLoadcall(_context_ || this, this._loadedComponents[index].htmlContent, this);
+        this.loadHtmlText(SJL._loadedComponents[index].htmlContent, onLoad, _clearHtml_, _context_);
     }
 
     return this;
