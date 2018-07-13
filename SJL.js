@@ -341,7 +341,8 @@ SJL.extend("request", function (method, url, data, callback, _context_) {
     return this;
 });
 
-SJL.extend("get", function(url, callback, _context_){
+SJL.extend("get", function (url, callback, _context_) {
+    console.log("will be request the url", url)
     this.request("GET", url, null, callback, _context_);
     return this;
 });
@@ -479,7 +480,7 @@ SJL.extend("loadComponent", function (htmlName, onLoad, _clearHtml_, _context_, 
 
 
 /** This method load an html named [appName].html and automaticaly instanciate an javascript class named [appName] */
-SJL.extend("loadApp", function(appName, onLoad, appArgumentsArray, _clearHtml_, _context_, _onLoadArguments_){
+SJL.extend(["loadApp", "loadActivity"], function(appName, onLoad, appArgumentsArray, _clearHtml_, _context_, _onLoadArguments_){
 	//checks by old running app and notify them	
 	if (this.elements[0].hasOwnProperty("SJL_CurrAPP"))
 	{
@@ -513,6 +514,29 @@ SJL.extend("loadApp", function(appName, onLoad, appArgumentsArray, _clearHtml_, 
 
 		onLoad.call(_context_ || this, appInstance, this, _onLoadArguments_);
 	}, _clearHtml_);
+
+    return this;
+});
+
+SJL.extend(["unLoadApp", "unLoadActivity"], function (appName, onLoad, appArgumentsArray, _clearHtml_, _context_, _onLoadArguments_) {
+    //checks by old running app and notify them	
+    if (this.elements[0].hasOwnProperty("SJL_CurrAPP")) {
+        var app = this.elements[0].SJL_CurrAPP;
+        if (app.hasOwnProperty("destructor"))
+            app.destructor();
+        if (app.hasOwnProperty("stop"))
+            app.stop();
+        if (app.hasOwnProperty("release"))
+            app.release();
+        if (app.hasOwnProperty("free"))
+            app.free();
+        if (app.hasOwnProperty("destroy"))
+            app.destroy();
+        if (app.hasOwnProperty("dispose"))
+            app.dispose();
+    };
+
+    this.setValue("");
 
     return this;
 });
