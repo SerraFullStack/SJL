@@ -405,19 +405,29 @@ SJL.extend(["include", "loadScript", "script"], function (scriptsSrc, onDone, _c
 });
 
 /** this method load an additional html. Scripts and Styles are automatically parsed and moved to header*/
-SJL.extend("loadHtmlText", function(htmlText, onLoad, _clearHtml, _context_)
+SJL.extend("loadHtmlText", function (htmlText, onLoad, _clearHtml, _context_, _onLoadArguments_, _discardCssAndJs_)
 {
+    //the argument _discardCssAndJs_ can be used to prevend excessive css and javascript loading (when components are loading)
+    if (typeof (_discardCssAndJs_) == 'undefined')
+        _discardCssAndJs_ = false;
+
     //try put any header in heaer
     var temp = document.createElement("div");
     temp.innerHTML = htmlText;
 
-    var scripts = $(temp).$("script").do(function(currEl){
-        eval (currEl.innerHTML);
+    var scripts = $(temp).$("script").do(function (currEl) {
+        if (!_discardCssAndJs_)
+            eval(currEl.innerHTML);
+
         currEl.parentNode.removeChild(currEl); 
     });
 
-    var css = $(temp).$("style").do(function(currEl){
-        document.head.appendChild(currEl);
+    var css = $(temp).$("style").do(function (currEl) {
+        if (!_discardCssAndJs_) {
+            document.head.appendChild(currEl);
+        }
+        else
+            currEl.parentNode.removeChild(currEl);
     });
 
     htmlText = temp.innerHTML;
@@ -433,9 +443,9 @@ SJL.extend("loadHtmlText", function(htmlText, onLoad, _clearHtml, _context_)
     //add the html to this.elements
     this.do(function(c){c.innerHTML += htmlText;});
     
-    onLoad.call(_context_ || this, htmlText, this);
+    onLoad.call(_context_ || this, htmlText, this, _onLoadArguments_);
 })
-SJL.extend(["loadHtml", "setHtml", "loadComponent"], function(htmlName, onLoad, _clearHtml_, _context_){
+SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _clearHtml_, _context_, _onLoadArguments_) {
     if (!SJL.hasOwnProperty("_loadedComponents"))
         SJL._loadedComponents = [];
     
@@ -448,22 +458,28 @@ SJL.extend(["loadHtml", "setHtml", "loadComponent"], function(htmlName, onLoad, 
     if (index == -1)
     {
         //load the html file
-        this.get(htmlName, function(result){
+        this.get(htmlName, function (result) {
             SJL._loadedComponents.push({htmlName: htmlName, htmlContent: result});
-            this.loadHtmlText(result, onLoad, _clearHtml_, _context_);
+            this.loadHtmlText(result, onLoad, _clearHtml_, _context_, _onLoadArguments_);
         }, this);
     }
     else
     {
-        this.loadHtmlText(SJL._loadedComponents[index].htmlContent, onLoad, _clearHtml_, _context_);
+        this.loadHtmlText(SJL._loadedComponents[index].htmlContent, onLoad, _clearHtml_, _context_, _onLoadArguments_, true);
     }
 
     return this;
 });
 
+SJL.extend("loadComponent", function (htmlName, onLoad, _clearHtml_, _context_, _onLoadArguments_) {
+    if (htmlName.indexOf(".htm") == -1)
+        htmlName += ".html";
+    return this.loadHtml(htmlName, onLoad, _clearHtml_, _context_, _onLoadArguments_);
+});
+
 
 /** This method load an html named [appName].html and automaticaly instanciate an javascript class named [appName] */
-SJL.extend("loadApp", function(appName, onLoad, appArgumentsArray, _clearHtml_, _context_){
+SJL.extend("loadApp", function(appName, onLoad, appArgumentsArray, _clearHtml_, _context_, _onLoadArguments_){
 	//checks by old running app and notify them	
 	if (this.elements[0].hasOwnProperty("SJL_CurrAPP"))
 	{
@@ -484,13 +500,19 @@ SJL.extend("loadApp", function(appName, onLoad, appArgumentsArray, _clearHtml_, 
 	
 	this.loadHtml(appName + ".html", function(){
         var appInstance = null;
-		appArgumentsArray = appArgumentsArray || null;
+        appArgumentsArray = appArgumentsArray || null;
+
+        if (appName.indexOf("/") > 0) {
+            appName = appName.split('/');
+            appName = appName[appName.length - 1];
+        }
+
         eval('if (typeof('+appName+') != "undefined"){ appInstance = new '+appName+'(appArgumentsArray);}');
 		
 		this.elements[0].SJL_CurrAPP = appInstance;
 
-        onLoad.call(_context_ || this, appInstance, this);
-    }, _clearHtml_);
+		onLoad.call(_context_ || this, appInstance, this, _onLoadArguments_);
+	}, _clearHtml_);
 
     return this;
 });
