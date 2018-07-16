@@ -84,6 +84,7 @@
             return ret;
         };
 
+
         this.S = function (selector) {
             var vector = [];
             for (var c in this.elements)
@@ -113,6 +114,8 @@
      */
     S = function(selector)
     {
+
+
         //create a vector to convert nodeList in to an array
         var vector = [];
 
@@ -130,7 +133,8 @@
         }
 
         //create a new _SJL with the vector of elements
-        ret =  new _SJL(vector);
+        ret = new _SJL(vector);
+
 
         //return the new _SJL object
         return ret;
@@ -317,13 +321,13 @@ SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callba
 
 
 
-SJL.extend("request", function (method, url, data, callback, _context_) {
+SJL.extend("request", function (method, url, data, callback, _context_, _callbackAditionalArgs_) {
     callback = callback || null;
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
             if (callback != null) {
-                callback.call(_context_ || this, this.responseText);
+                callback.call(_context_ || this, this.responseText, _callbackAditionalArgs_);
             }
         }
     };
@@ -341,14 +345,13 @@ SJL.extend("request", function (method, url, data, callback, _context_) {
     return this;
 });
 
-SJL.extend("get", function (url, callback, _context_) {
-    console.log("will be request the url", url)
-    this.request("GET", url, null, callback, _context_);
+SJL.extend("get", function (url, callback, _context_, _callbackAditionalArgs_) {
+    this.request("GET", url, null, callback, _context_, _callbackAditionalArgs_);
     return this;
 });
 
-SJL.extend("post", function(url, data, callback, _context_){
-    this.request("POST", url, data, callback, _context_);
+SJL.extend("post", function (url, data, callback, _context_, _callbackAditionalArgs_) {
+    this.request("POST", url, data, callback, _context_, _callbackAditionalArgs_);
     return this;
 });
 
@@ -446,6 +449,7 @@ SJL.extend("loadHtmlText", function (htmlText, onLoad, _clearHtml, _context_, _o
     
     onLoad.call(_context_ || this, htmlText, this, _onLoadArguments_);
 })
+
 SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _clearHtml_, _context_, _onLoadArguments_) {
     if (!SJL.hasOwnProperty("_loadedComponents"))
         SJL._loadedComponents = [];
@@ -460,17 +464,62 @@ SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _clearHtml_, _co
     {
         //load the html file
         this.get(htmlName, function (result) {
-            SJL._loadedComponents.push({htmlName: htmlName, htmlContent: result});
+            SJL._loadedComponents.push({ htmlName: htmlName, htmlContent: result, alreadyLoaded: true });
             this.loadHtmlText(result, onLoad, _clearHtml_, _context_, _onLoadArguments_);
         }, this);
     }
     else
     {
-        this.loadHtmlText(SJL._loadedComponents[index].htmlContent, onLoad, _clearHtml_, _context_, _onLoadArguments_, true);
+        //the property alreadyLoaded is used by the preloadHtml method to loadHTMl without start the javascript. Is this specific case, the javascript is started bellow
+        this.loadHtmlText(SJL._loadedComponents[index].htmlContent, onLoad, _clearHtml_, _context_, _onLoadArguments_, SJL._loadedComponents[index].alreadyLoaded);
+        SJL._loadedComponents[index].alreadyLoaded = true;
     }
 
     return this;
 });
+
+//the function bellow can be used to create a cache to functions like 'loadApp' and 'loadComponents'
+SJL.extend(["preloadHtml", "preload"], function (htmlFileName, onDone, _context_) {
+
+    if (htmlFileName.constructor !== Array)
+        htmlFileName = [htmlFileName];
+
+    if (!SJL.hasOwnProperty("_loadedComponents"))
+        SJL._loadedComponents = [];
+
+    var loading = 0;
+    for (var c = 0; c < htmlFileName.length; c++) {
+        loading++;
+        if (htmlFileName[c].indexOf(".htm") == -1)
+            htmlFileName[c] += ".html";
+        //try to find the htmlName in loadedComponents
+        var index = SJL._loadedComponents.findIndex(function (currEl) {
+            return currEl.htmlName == htmlFileName[c];
+        });
+
+        if (index == -1) {
+            //load the html file
+            this.get(htmlFileName[c], function (result, contAtt) {
+                SJL._loadedComponents.push({ htmlName: htmlFileName[contAtt], htmlContent: result, alreadyLoaded: false });
+                loading--;
+            }, this, c);
+        }
+        else {
+            loading--;
+        }
+    }
+
+    var waiter = setInterval(function () {
+        if (loading == 0)
+        {
+            clearTimeout(waiter);
+            onDone.call(_context_ || window);
+        }
+    }, 10);
+
+    return this;
+});
+
 
 SJL.extend("loadComponent", function (htmlName, onLoad, _clearHtml_, _context_, _onLoadArguments_) {
     if (htmlName.indexOf(".htm") == -1)
@@ -480,11 +529,12 @@ SJL.extend("loadComponent", function (htmlName, onLoad, _clearHtml_, _context_, 
 
 
 /** This method load an html named [appName].html and automaticaly instanciate an javascript class named [appName] */
-SJL.extend(["loadApp", "loadActivity"], function(appName, onLoad, appArgumentsArray, _clearHtml_, _context_, _onLoadArguments_){
+SJL.extend(["loadApp", "loadActivity"], function (appName, onLoad, appArgumentsArray, _clearHtml_, _context_, _onLoadArguments_) {
+
 	//checks by old running app and notify them	
 	if (this.elements[0].hasOwnProperty("SJL_CurrAPP"))
 	{
-		var app = this.elements[0].SJL_CurrAPP;
+	    var app = this.elements[0].SJL_CurrAPP;
 		if (app.hasOwnProperty("destructor"))
 			app.destructor();
 		if (app.hasOwnProperty("stop"))
@@ -499,25 +549,82 @@ SJL.extend(["loadApp", "loadActivity"], function(appName, onLoad, appArgumentsAr
 			app.dispose();
 	};
 	
-	this.loadHtml(appName + ".html", function(){
+	this.loadHtml(appName + ".html", function () {
         var appInstance = null;
         appArgumentsArray = appArgumentsArray || null;
+        var appSPointer = this;
 
         if (appName.indexOf("/") > 0) {
             appName = appName.split('/');
             appName = appName[appName.length - 1];
         }
 
-        eval('if (typeof('+appName+') != "undefined"){ appInstance = new '+appName+'(appArgumentsArray);}');
+        eval('if (typeof('+appName+') != "undefined"){ appInstance = new '+appName+'(appArgumentsArray, appSPointer);}');
 		
-		this.elements[0].SJL_CurrAPP = appInstance;
+        this.elements[0].SJL_CurrAPP = appInstance;
 
-		onLoad.call(_context_ || this, appInstance, this, _onLoadArguments_);
+        /*_changeHref_ = _changeHref_ || "noChange";
+        if ((_changeHref_ != "noChange") && (typeof(appName) != 'undefined"'))
+        {
+            var argsString = "";
+            
+            if (appArgumentsArray.constructor === Array) {
+                for (var cont = 0; cont < appArgumentsArray.length; cont++) {
+                    argsString += appArgumentsArray[cont]
+                    if (cont < appArgumentsArray.length - 1)
+                        argsString += ",";
+                }
+            }
+            else if (appArgumentsArray.constructor !== Object)
+                argsString = appArgumentsArray + "";
+
+            location.href = location.href.split('#')[0] + "#" + appName + (argsString ? "/" + argsString : "");
+        }*/
+
+		onLoad = onLoad || null;
+        if (onLoad != null)
+		    onLoad.call(_context_ || this, appInstance, this, _onLoadArguments_);
 	}, _clearHtml_);
 
     return this;
 });
 
+
+//auto load app specified in the url (http://server/#app/arg1,arg2)
+SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoad, _clearHtml_, _context_, _onLoadArguments_) {
+    if (location.href.indexOf("#") > 0) {
+        var temp = location.href.substr(location.href.indexOf('#') + 1, location.href.length);
+        var args = [];
+        if (temp.indexOf('/') > 0) {
+            args = temp.substr(temp.indexOf('/') + 1, temp.length);
+            args = args.split(',');
+            temp = temp.substr(0, temp.indexOf('/'));
+        }
+
+        this.loadApp(temp, onLoad, args, _clearHtml_, _context_, _onLoadArguments_);
+    }
+    else {
+        onNotLoad(_onLoadArguments_);
+    }
+});
+
+//monitores the url, autoloading apps
+SJL.extend(["autoLoadAppFromUrl", "autoLoadActivityFromUrl"], function (onNotLoad, onLoad, _forceFirst_) {
+    var __this = this;
+    window.onhashchange = function (_forceFirst_) {
+        __this.loadActivityFromUrl(onNotLoad, onLoad);
+    }
+
+    _forceFirst_ == _forceFirst_ || null;
+    if (_forceFirst_ == null)
+        _forceFirst_ = true;
+
+    if (_forceFirst_)
+        this.loadActivityFromUrl(onNotLoad, onLoad);
+
+});
+
+//force an app destructor method
 SJL.extend(["unLoadApp", "unLoadActivity"], function (appName, onLoad, appArgumentsArray, _clearHtml_, _context_, _onLoadArguments_) {
     //checks by old running app and notify them	
     if (this.elements[0].hasOwnProperty("SJL_CurrAPP")) {
@@ -546,6 +653,21 @@ SJL.extend("setProperty", function (name, value) {
         eval("this.elements[c]." + name + " = value;");
 
     return this;
+});
+
+SJL.extend("getProperty", function (name, _defaultValue_) {
+    _defaultValue_ = _defaultValue_ || null;
+    var ret = [];
+    for (var c in this.elements) {
+        eval("if (this.elements[c].hasOwnProperty('"+name+"')){ret.push(this.elements[c]." + name + ");}");
+    }
+
+    if (ret.length == 1)
+        return ret[0];
+    else if (ret.length > 1)
+        return ret;
+    else
+        return _defaultValue_;
 });
 
 SJL.extend(["delete", "exclude"], function () {
