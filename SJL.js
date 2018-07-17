@@ -309,6 +309,21 @@ SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callba
         calculatedVal = multFactor * valMax;
         //aplica o offset
         calculatedVal += from;
+
+
+        if (to > from) {
+            if (calculatedVal < from)
+                calculatedVal = from;
+            else if (calculatedVal > to)
+                calculatedVal = to;
+        }
+        else {
+            if (calculatedVal < to)
+                calculatedVal = to;
+            else if (calculatedVal > from)
+                calculatedVal = from;
+        }
+
         //chama a fun��o passada por parametro
         if (currVal != 15)
             callback.call(this, calculatedVal, _pointers_);
@@ -325,15 +340,15 @@ SJL.extend("request", function (method, url, data, callback, _context_, _callbac
     callback = callback || null;
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
+        if (this.readyState == 4){// && this.status == 200) {
             if (callback != null) {
-                callback.call(_context_ || this, this.responseText, _callbackAditionalArgs_);
+                callback.call(_context_ || this, this.responseText, this, _callbackAditionalArgs_);
             }
         }
     };
     xhttp.open(method, url, true);
     xhttp.method = method.toUpperCase();
-    if (method.toLowerCase() == "post")
+    if ("post put".indexOf(method.toLowerCase()) > -1)
     {
         xhttp.send(data);
     }
@@ -352,6 +367,16 @@ SJL.extend("get", function (url, callback, _context_, _callbackAditionalArgs_) {
 
 SJL.extend("post", function (url, data, callback, _context_, _callbackAditionalArgs_) {
     this.request("POST", url, data, callback, _context_, _callbackAditionalArgs_);
+    return this;
+});
+
+SJL.extend("put", function (url, data, callback, _context_, _callbackAditionalArgs_) {
+    this.request("PUT", url, data, callback, _context_, _callbackAditionalArgs_);
+    return this;
+});
+
+SJL.extend("delete", function (url, callback, _context_, _callbackAditionalArgs_) {
+    this.request("DELETE", url, null, callback, _context_, _callbackAditionalArgs_);
     return this;
 });
 
@@ -471,6 +496,8 @@ SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _clearHtml_, _co
     else
     {
         //the property alreadyLoaded is used by the preloadHtml method to loadHTMl without start the javascript. Is this specific case, the javascript is started bellow
+        if (!SJL._loadedComponents[index].hasOwnProperty("alreadyLoaded"))
+            SJL._loadedComponents[index].alreadyLoaded = false;
         this.loadHtmlText(SJL._loadedComponents[index].htmlContent, onLoad, _clearHtml_, _context_, _onLoadArguments_, SJL._loadedComponents[index].alreadyLoaded);
         SJL._loadedComponents[index].alreadyLoaded = true;
     }
@@ -499,7 +526,7 @@ SJL.extend(["preloadHtml", "preload"], function (htmlFileName, onDone, _context_
 
         if (index == -1) {
             //load the html file
-            this.get(htmlFileName[c], function (result, contAtt) {
+            this.get(htmlFileName[c], function (result, xhr, contAtt) {
                 SJL._loadedComponents.push({ htmlName: htmlFileName[contAtt], htmlContent: result, alreadyLoaded: false });
                 loading--;
             }, this, c);
