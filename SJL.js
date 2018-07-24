@@ -86,6 +86,10 @@
 
 
         this.S = function (selector) {
+
+            if (typeof (selector) == 'undefined')
+                return this;//SJL;
+
             var vector = [];
             for (var c in this.elements)
             {
@@ -114,6 +118,8 @@
      */
     S = function(selector)
     {
+        if (typeof (selector) == 'undefined')
+            return SJL;
 
 
         //create a vector to convert nodeList in to an array
