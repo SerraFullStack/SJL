@@ -29,7 +29,7 @@
             _context_ = _context_ || this;
             for (c in this.elements)
             {
-                func.call(this, this.elements[c], _context_);
+                func.call(_context_, this.elements[c], _context_);
             }
 
             return this;
@@ -330,7 +330,7 @@ SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callba
                 calculatedVal = from;
         }
 
-        //chama a fun��o passada por parametro
+        //chama a função passada por parametro
         if (currVal != 15)
             callback.call(this, calculatedVal, _pointers_);
         else
@@ -342,13 +342,22 @@ SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callba
 
 
 
-SJL.extend("request", function (method, url, data, callback, _context_, _callbackAditionalArgs_) {
+SJL.extend("request", function (method, url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_) {
     callback = callback || null;
     var xhttp = new XMLHttpRequest();
+    if (typeof(_progressCallback_) != 'undefined')
+    {
+        xhttp.onprogress = function(evt){
+            if (evt.lengthComputable)
+            {
+                _progressCallback_.call(_context_ || this, 100.0 / evt.total * evt.loaded, evt.total, evt.loaded, url, evt, xhttp);
+            }
+        }
+    }
     xhttp.onreadystatechange = function() {
         if (this.readyState == 4){// && this.status == 200) {
             if (callback != null) {
-                callback.call(_context_ || this, this.responseText, this, _callbackAditionalArgs_);
+                callback.call(_context_ || this, this.responseText, this, _callbackAditionalArgs_, xhttp);
             }
         }
     };
@@ -366,27 +375,27 @@ SJL.extend("request", function (method, url, data, callback, _context_, _callbac
     return this;
 });
 
-SJL.extend("get", function (url, callback, _context_, _callbackAditionalArgs_) {
-    this.request("GET", url, null, callback, _context_, _callbackAditionalArgs_);
+SJL.extend("get", function (url, callback, _context_, _callbackAditionalArgs_, _progressCallback_) {
+    this.request("GET", url, null, callback, _context_, _callbackAditionalArgs_, _progressCallback_);
     return this;
 });
 
-SJL.extend("post", function (url, data, callback, _context_, _callbackAditionalArgs_) {
-    this.request("POST", url, data, callback, _context_, _callbackAditionalArgs_);
+SJL.extend("post", function (url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_) {
+    this.request("POST", url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_);
     return this;
 });
 
-SJL.extend("put", function (url, data, callback, _context_, _callbackAditionalArgs_) {
-    this.request("PUT", url, data, callback, _context_, _callbackAditionalArgs_);
+SJL.extend("put", function (url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_) {
+    this.request("PUT", url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_);
     return this;
 });
 
-SJL.extend("delete", function (url, callback, _context_, _callbackAditionalArgs_) {
-    this.request("DELETE", url, null, callback, _context_, _callbackAditionalArgs_);
+SJL.extend("delete", function (url, callback, _context_, _callbackAditionalArgs_, _progressCallback_) {
+    this.request("DELETE", url, null, callback, _context_, _callbackAditionalArgs_, _progressCallback_);
     return this;
 });
 
-SJL.extend(["include", "loadScript", "script"], function (scriptsSrc, onDone, _context_) {
+SJL.extend(["includeUsingTags", "loadScriptUsingTags", "scriptUsingTags", "requireUsingTags"], function (scriptsSrc, onDone, _context_) {
     onDone = onDone || null;
 
     if (scriptsSrc.constructor !== Array)
@@ -404,8 +413,6 @@ SJL.extend(["include", "loadScript", "script"], function (scriptsSrc, onDone, _c
             //create the script element
             var script = document.createElement("script");
             //set the src of the new script
-            
-            
         }
         else
         {
@@ -428,12 +435,59 @@ SJL.extend(["include", "loadScript", "script"], function (scriptsSrc, onDone, _c
         };
         //add the new script to DOM. After this, the browser will be load the new script.
         document.head.appendChild(script);
+    }
 
+    return this;
+});
 
-        var clone1 = script.cloneNode(true);
-        var clone2 = script.cloneNode(true);
-        document.head.appendChild(clone1);
-        document.head.appendChild(clone2);
+SJL.extend(["include", "loadScript", "script", "require"], function (scriptsSrc, onDone, _context_, _progressCallback_) {
+    onDone = onDone || null;
+
+    if (scriptsSrc.constructor !== Array)
+        scriptsSrc =[scriptsSrc];
+        
+    var dones = scriptsSrc.length;
+    for (var c in scriptsSrc)
+    {
+        var type = "text/javascript";
+        if (scriptsSrc.indexOf(".css") == (scriptsSrc.length-4))
+            type = "text/css";
+
+        this.get(scriptsSrc[c], function(response){
+
+            if (type == "text/javascript")
+            {
+                //create the script element
+                var script = document.createElement("script");
+                //set the src of the new script
+
+                eval (response);
+            }
+            else
+            {
+                var script = document.createElement('link');
+                script.rel = "Stylesheet";
+                script.innerHTML = response;
+            
+            //determine the type of the new script
+            script.type = type;
+
+                //set the onloadFunction
+                
+                //add the new script to DOM. After this, the browser will be load the new script.
+                document.documentElement.appendChild(script);
+            }
+
+            //script.onload = function () {
+                dones --;
+                if (dones == 0)
+                {
+                    if (onDone != null)
+                        onDone.call(_context_ || this);
+                }
+            //};
+            
+        }, _context_ || this, null, _progressCallback_);
     }
 
     return this;
@@ -442,46 +496,69 @@ SJL.extend(["include", "loadScript", "script"], function (scriptsSrc, onDone, _c
 /** this method load an additional html. Scripts and Styles are automatically parsed and moved to header*/
 SJL.extend("loadHtmlText", function (htmlText, onLoad, _clearHtml, _context_, _onLoadArguments_, _discardCssAndJs_)
 {
-    //the argument _discardCssAndJs_ can be used to prevend excessive css and javascript loading (when components are loading)
-    if (typeof (_discardCssAndJs_) == 'undefined')
-        _discardCssAndJs_ = false;
-
-    //try put any header in heaer
-    var temp = document.createElement("div");
-    temp.innerHTML = htmlText;
-
-    var scripts = $(temp).$("script").do(function (currEl) {
-        if (!_discardCssAndJs_)
-            eval(currEl.innerHTML);
-
-        currEl.parentNode.removeChild(currEl); 
-    });
-
-    var css = $(temp).$("style").do(function (currEl) {
-        if (!_discardCssAndJs_) {
-            document.head.appendChild(currEl);
-        }
-        else
-            currEl.parentNode.removeChild(currEl);
-    });
-
-    htmlText = temp.innerHTML;
-    
-    
-    //checks if to be clear the html
-    
     if ((typeof(_clearHtml_) == 'undefined') || (_clearHtml_ == true))
     {
         this.setProperty("innerHTML", "");
     }
-    
-    //add the html to this.elements
-    this.do(function(c){c.innerHTML += htmlText;});
+
+    this.do(function(c){
+        var nHtml = htmlText;
+
+        if ((nHtml.indexOf("__rnd__") > -1) || ((nHtml.indexOf("__uid__") > -1)))
+        {
+            if (!SJL.hasOwnProperty("UniqueIdCount"))
+            {
+                SJL.UniqueIdCount = 1;
+            }
+
+            var rep = "uid"+SJL.UniqueIdCount;
+            SJL.UniqueIdCount++;
+
+            nHtml =nHtml.replace(/__rnd__/g, rep).replace(/__uid__/g, rep);
+
+            //if have random data in scripts and css, the system could not ignore a new css and javascript text
+            _discardCssAndJs_ = false; 
+        }
+        //the argument _discardCssAndJs_ can be used to prevend excessive css and javascript loading (when components are loading)
+
+        if (typeof (_discardCssAndJs_) == 'undefined')
+            _discardCssAndJs_ = false;
+
+        //try put any header in heaer
+        var temp = document.createElement("div");
+        temp.innerHTML = nHtml;
+
+        var scripts = $(temp).$("script").do(function (currEl) {
+            if (!_discardCssAndJs_)
+                eval(currEl.innerHTML);
+
+            currEl.parentNode.removeChild(currEl); 
+        });
+
+        var css = $(temp).$("style").do(function (currEl) {
+            if (!_discardCssAndJs_) {
+                document.head.appendChild(currEl);
+            }
+            else
+                currEl.parentNode.removeChild(currEl);
+        });
+
+        nHtml = temp.innerHTML;
+        
+        //checks if to be clear the html
+        
+        
+        
+        //add the html to this.elements
+        //    this.do(function(c){c.innerHTML += htmlText;});
+        
+        c.innerHTML += nHtml;
+    });
     
     onLoad.call(_context_ || this, htmlText, this, _onLoadArguments_);
 })
 
-SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _clearHtml_, _context_, _onLoadArguments_) {
+SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
     if (!SJL.hasOwnProperty("_loadedComponents"))
         SJL._loadedComponents = [];
     
@@ -494,10 +571,17 @@ SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _clearHtml_, _co
     if (index == -1)
     {
         //load the html file
-        this.get(htmlName, function (result) {
-            SJL._loadedComponents.push({ htmlName: htmlName, htmlContent: result, alreadyLoaded: true });
-            this.loadHtmlText(result, onLoad, _clearHtml_, _context_, _onLoadArguments_);
-        }, this);
+        this.get(htmlName, function (result, request) {
+            if ((request.status >= 200) && (request.status < 300)) {    
+                SJL._loadedComponents.push({ htmlName: htmlName, htmlContent: result, alreadyLoaded: true });
+                this.loadHtmlText(result, onLoad, _clearHtml_, _context_, _onLoadArguments_);
+            }
+            else
+            {
+                if (typeof(_onFailure_) != 'undefined' && _onFailure_ != null)
+                    _onFailure_.call (_context_ || this, request);
+            }
+        }, this, null, _progressCallback_);
     }
     else
     {
@@ -512,7 +596,7 @@ SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _clearHtml_, _co
 });
 
 //the function bellow can be used to create a cache to functions like 'loadApp' and 'loadComponents'
-SJL.extend(["preloadHtml", "preload"], function (htmlFileName, onDone, _context_) {
+SJL.extend(["preloadHtml", "preload"], function (htmlFileName, onDone, _context_, _progressCallback_) {
 
     if (htmlFileName.constructor !== Array)
         htmlFileName = [htmlFileName];
@@ -535,7 +619,7 @@ SJL.extend(["preloadHtml", "preload"], function (htmlFileName, onDone, _context_
             this.get(htmlFileName[c], function (result, xhr, contAtt) {
                 SJL._loadedComponents.push({ htmlName: htmlFileName[contAtt], htmlContent: result, alreadyLoaded: false });
                 loading--;
-            }, this, c);
+            }, this, c, _progressCallback_);
         }
         else {
             loading--;
@@ -546,7 +630,7 @@ SJL.extend(["preloadHtml", "preload"], function (htmlFileName, onDone, _context_
         if (loading == 0)
         {
             clearTimeout(waiter);
-            onDone.call(_context_ || window);
+            onDone.call(_context_ || this);
         }
     }, 10);
 
@@ -554,32 +638,48 @@ SJL.extend(["preloadHtml", "preload"], function (htmlFileName, onDone, _context_
 });
 
 
-SJL.extend("loadComponent", function (htmlName, onLoad, _clearHtml_, _context_, _onLoadArguments_) {
+SJL.extend("loadComponent", function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
     if (htmlName.indexOf(".htm") == -1)
         htmlName += ".html";
-    return this.loadHtml(htmlName, onLoad, _clearHtml_, _context_, _onLoadArguments_);
+    return this.loadHtml(htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
 });
 
 
-/** This method load an html named [appName].html and automaticaly instanciate an javascript class named [appName] */
-SJL.extend(["loadApp", "loadActivity"], function (appName, onLoad, appArgumentsArray, _clearHtml_, _context_, _onLoadArguments_) {
+/** This method load an html named [appName].html and automaticaly instanciate an javascript class named [appName].
+ * Is very similiar to loadComponent, but with de advantage of auto instanciate the class.
+ */
+SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName, onLoad, appArgumentsArray, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
 
 	//checks by old running app and notify them	
-	if (this.elements[0].hasOwnProperty("SJL_CurrAPP"))
+	if ((this.elements[0].hasOwnProperty("SJL_CurrAPP") && this.elements[0].SJL_CurrAPP != null))
 	{
-	    var app = this.elements[0].SJL_CurrAPP;
-		if (app.hasOwnProperty("destructor"))
-			app.destructor();
-		if (app.hasOwnProperty("stop"))
-			app.stop();
-		if (app.hasOwnProperty("release"))
-			app.release();
-		if (app.hasOwnProperty("free"))
-			app.free();
-		if (app.hasOwnProperty("destroy"))
-			app.destroy();
-		if (app.hasOwnProperty("dispose"))
-			app.dispose();
+        var app = this.elements[0].SJL_CurrAPP;
+        var elementP = this.elements[0];
+        var _this = this;
+        if (app != null)
+        {
+            if (app.hasOwnProperty("destructor"))
+                app.destructor();
+            if (app.hasOwnProperty("stop"))
+                app.stop();
+            if (app.hasOwnProperty("release"))
+                app.release();
+            if (app.hasOwnProperty("free"))
+                app.free();
+            if (app.hasOwnProperty("destroy"))
+                app.destroy();
+
+            //dispose needs thats a callback is called to continue
+            if (app.hasOwnProperty("dispose"))
+            {
+                app.dispose(function(){
+                    elementP.SJL_CurrAPP = null;
+                    _this.loadApp(appName, onLoad, appArgumentsArray, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
+
+                });
+                return;
+            }
+        }
 	};
 	
 	this.loadHtml(appName + ".html", function () {
@@ -592,39 +692,21 @@ SJL.extend(["loadApp", "loadActivity"], function (appName, onLoad, appArgumentsA
             appName = appName[appName.length - 1];
         }
 
-        eval('if (typeof('+appName+') != "undefined"){ appInstance = new '+appName+'(appArgumentsArray, appSPointer);}');
+        eval('if (typeof('+appName+') != "undefined"){ appInstance = new '+appName+'(appArgumentsArray, appSPointer);}else{console.log("SJL could not locate the class \'"+appName+"\'");}');
 		
         this.elements[0].SJL_CurrAPP = appInstance;
-
-        /*_changeHref_ = _changeHref_ || "noChange";
-        if ((_changeHref_ != "noChange") && (typeof(appName) != 'undefined"'))
-        {
-            var argsString = "";
-            
-            if (appArgumentsArray.constructor === Array) {
-                for (var cont = 0; cont < appArgumentsArray.length; cont++) {
-                    argsString += appArgumentsArray[cont]
-                    if (cont < appArgumentsArray.length - 1)
-                        argsString += ",";
-                }
-            }
-            else if (appArgumentsArray.constructor !== Object)
-                argsString = appArgumentsArray + "";
-
-            location.href = location.href.split('#')[0] + "#" + appName + (argsString ? "/" + argsString : "");
-        }*/
 
 		onLoad = onLoad || null;
         if (onLoad != null)
 		    onLoad.call(_context_ || this, appInstance, this, _onLoadArguments_);
-	}, _clearHtml_);
+	}, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
 
     return this;
 });
 
 
 //auto load app specified in the url (http://server/#app/arg1,arg2)
-SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoad, _clearHtml_, _context_, _onLoadArguments_) {
+SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoad, _prefixOrFolder_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
     if (location.href.indexOf("#") > 0) {
         var temp = location.href.substr(location.href.indexOf('#') + 1, location.href.length);
         var args = [];
@@ -634,7 +716,17 @@ SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoa
             temp = temp.substr(0, temp.indexOf('/'));
         }
 
-        this.loadApp(temp, onLoad, args, _clearHtml_, _context_, _onLoadArguments_);
+        if (typeof(_prefixOrFolder_) != 'undefined' )
+        {
+            if (_prefixOrFolder_.endsWith ('.'))
+                temp = _prefixOrFolder_ + temp;
+            else
+                temp = _prefixOrFolder_ +'.' + temp;
+        }
+
+        temp = temp.replace(/\./g, "/");
+
+        this.loadApp(temp, onLoad, args, function(request){onNotLoad(request);}, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
     }
     else {
         onNotLoad(_onLoadArguments_);
@@ -642,10 +734,12 @@ SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoa
 });
 
 //monitores the url, autoloading apps
-SJL.extend(["autoLoadAppFromUrl", "autoLoadActivityFromUrl"], function (onNotLoad, onLoad, _forceFirst_) {
+SJL.extend(["autoLoadAppFromUrl", "autoLoadActivityFromUrl"], function (onNotLoad, onLoad, _forceFirst_, _prefixOrFolder_, _progressCallback_) {
     var __this = this;
-    window.onhashchange = function (_forceFirst_) {
-        __this.loadActivityFromUrl(onNotLoad, onLoad);
+    window.onhashchange = function (event) {
+        //event.preventDefault();
+        __this.loadActivityFromUrl(onNotLoad, onLoad, _prefixOrFolder_, _progressCallback_);
+
     }
 
     _forceFirst_ == _forceFirst_ || null;
@@ -653,7 +747,7 @@ SJL.extend(["autoLoadAppFromUrl", "autoLoadActivityFromUrl"], function (onNotLoa
         _forceFirst_ = true;
 
     if (_forceFirst_)
-        this.loadActivityFromUrl(onNotLoad, onLoad);
+        this.loadActivityFromUrl(onNotLoad, onLoad, _prefixOrFolder_, _progressCallback_);
 
 });
 
