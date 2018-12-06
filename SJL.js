@@ -84,8 +84,8 @@
             return ret;
         };
 
-
-        this.S = function (selector) {
+        //the argument _forceNewInstance_ just do effect if the pool of instances is in use
+        this.S = function (selector, _forceNewInstance_) {
 
             if (typeof (selector) == 'undefined')
                 return this;//SJL;
@@ -102,7 +102,8 @@
             }
 
             //create a new _SJL with the vector of elements
-            ret = new _SJL(vector);
+            //ret = new _SJL(vector);
+            ret = __getSJLInstance(vector, _forceNewInstance_);
 
             //return the new _SJL object
             return ret;
@@ -116,7 +117,62 @@
     /** Returns a new _SJL instance to work with elements catched by css selector argument "selector" 
      * @param {string} selector - The css selector that will be used to select a list of elements (or unique element) from DOM. These elements are puted in the "elements" property of new _SJL instance
      */
-    S = function(selector)
+
+
+     __SJLPool={
+        use: false,
+        max: 2,
+        currIndex:0,
+        instances:[],
+        _infoTotalUses: 0
+     }
+
+     //allow the limitation of instance os SJL. If used a pool of instances will be used. The application can use 
+     //_forceNewInstance_ to ignore pool and create a permanent instance.
+     //
+     //Pool of instances is disabled by default, bit, in large application, it can reduce memory usage
+     __setSJLInstancesPool = function(usePool, maxIntances, preStartInstances){
+        __SJLPool.use = usePool;
+        __SJLPool.max = maxIntances;
+        __SJLPool.currIndex = 0;
+        if (preStartInstances)
+        {
+            for (var c = 0; c < maxIntances; c++)
+                __SJLPool.instances[c] = new _SJL();
+        }
+     }
+
+    //the argument _forceNewInstance_ just do effect if the pool of instances is in use
+    __getSJLInstance = function(vector, _forceNewInstance_)
+    {
+        if ((!__SJLPool.use) || (_forceNewInstance_ === true))
+        {
+            if (_forceNewInstance_ === true)
+                console.log("new SJL instance has forced");
+            return new _SJL(vector)
+        }
+        else
+        {
+            __SJLPool._infoTotalUses++;
+            
+            if (__SJLPool.instances.length <= __SJLPool.currIndex)
+                __SJLPool.instances[__SJLPool.currIndex] = new _SJL();
+            
+            var ret = __SJLPool.instances[__SJLPool.currIndex++];
+            if (__SJLPool.currIndex >= __SJLPool.max)
+                __SJLPool.currIndex = 0;
+
+            eval("window.__SJL_"+ret._id + " = null");
+
+            ret.elements = vector;
+            ret._importElementsPoperties();
+            return ret;
+            
+        }
+     }
+
+    //the argument _forceNewInstance_ just do effect if the pool of instances is in use
+    S = function(selector, _forceNewInstance_)
     {
         if (typeof (selector) == 'undefined')
             return SJL;
@@ -139,7 +195,7 @@
         }
 
         //create a new _SJL with the vector of elements
-        ret = new _SJL(vector);
+        ret = __getSJLInstance(vector, _forceNewInstance_);
 
 
         //return the new _SJL object
@@ -656,21 +712,22 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         var app = this.elements[0].SJL_CurrAPP;
         var elementP = this.elements[0];
         var _this = this;
+        
         if (app != null)
         {
-            if (app.hasOwnProperty("destructor"))
+            if (typeof(app.destructor) != 'undefined')
                 app.destructor();
-            if (app.hasOwnProperty("stop"))
+            if (typeof(app.stop) != 'undefined')
                 app.stop();
-            if (app.hasOwnProperty("release"))
+            if (typeof(app.release) != 'undefined')
                 app.release();
-            if (app.hasOwnProperty("free"))
+            if (typeof(app.free) != 'undefined')
                 app.free();
-            if (app.hasOwnProperty("destroy"))
+            if (typeof(app.destroy) != 'undefined')
                 app.destroy();
 
             //dispose needs thats a callback is called to continue
-            if (app.hasOwnProperty("dispose"))
+            if (typeof(app.dispose) != 'undefined') //(app.hasOwnProperty("dispose"))
             {
                 app.dispose(function(){
                     elementP.SJL_CurrAPP = null;
@@ -679,8 +736,9 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                 });
                 return;
             }
+
         }
-	};
+    };
 	
 	this.loadHtml(appName + ".html", function () {
         var appInstance = null;
@@ -693,7 +751,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         }
 
         eval('if (typeof('+appName+') != "undefined"){ appInstance = new '+appName+'(appArgumentsArray, appSPointer);}else{console.log("SJL could not locate the class \'"+appName+"\'");}');
-		
+        
         this.elements[0].SJL_CurrAPP = appInstance;
 
 		onLoad = onLoad || null;
@@ -707,6 +765,9 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 
 //auto load app specified in the url (http://server/#app/arg1,arg2)
 SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoad, _prefixOrFolder_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
+    this.elements[0].oldUrl = this.elements[0].currUrl || "";
+    this.elements[0].currUrl = location.href;
+
     if (location.href.indexOf("#") > 0) {
         var temp = location.href.substr(location.href.indexOf('#') + 1, location.href.length);
         var args = [];
