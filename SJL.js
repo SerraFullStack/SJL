@@ -245,7 +245,7 @@ SJL.extend("setValue", function (data) {
     {
         var curr = this.elements[c];
 
-        if (curr.hasOwnProperty("value")) {
+        if (typeof(curr.value) != 'undefined') {
             if (data.constructor === Array)
                 curr.value = data[c];
             else
@@ -550,6 +550,68 @@ SJL.extend(["include", "loadScript", "script", "require"], function (scriptsSrc,
 });
 
 /** this method load an additional html. Scripts and Styles are automatically parsed and moved to header*/
+SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, onDone) {
+    //scrolls through all subelements and, for elements that have "SJLload"  attribute, try auto load
+    var allElements = $(element).$("*");
+    var length = allElements.elements.length;
+
+    if (allElements.elements.length == 0)
+    {
+        onDone.call(this);
+    }
+    else
+    {
+        var waitings = 0;
+        var _this = this;
+        allElements.do(function(currElement){
+            var componentName = currElement.getAttribute("SJLLoad");
+            if (componentName != null)
+            {
+                //SJL_CurrAPP
+                var active = currElement.getAttribute("SJLActive") ||
+                currElement.getAttribute("SJLInstanciate") ||
+                currElement.getAttribute("SJLIntance") || "none";
+                console.log("active", active);
+                
+                if ((active != "none") && (active != "") && (active != "false"))
+                {
+                    console.log("active instance")
+                    $(currElement).loadActiveComponent(componentName, function(newInstance){
+                        waitings++;
+
+                        //app and SJL_CurrAPP has are same value
+                        newInstance.controlledElement.app = newInstance;
+                        if (waitings == length)
+                        {
+                            onDone.call(_this);
+                        }
+                    });
+                }
+                else
+                {
+                    console.log("normal component include");
+                    $(currElement).loadComponent(componentName, function(){
+                        waitings++;
+                        if (waitings == length)
+                        {
+                            onDone.call(_this);
+                        }
+                    });
+                }
+            }
+            else
+            {
+                waitings++;
+                if (waitings == length)
+                {
+                    onDone.call(_this);
+                }
+            }
+        });
+        //onDone.call(_this);
+    }
+});
+
 SJL.extend("loadHtmlText", function (htmlText, onLoad, _clearHtml, _context_, _onLoadArguments_, _discardCssAndJs_)
 {
     if ((typeof(_clearHtml_) == 'undefined') || (_clearHtml_ == true))
@@ -557,7 +619,11 @@ SJL.extend("loadHtmlText", function (htmlText, onLoad, _clearHtml, _context_, _o
         this.setProperty("innerHTML", "");
     }
 
+    var processeds = 0;
+
+    console.log("totalElements", this.elements.length);
     this.do(function(c){
+        console.log("passou");
         var nHtml = htmlText;
 
         if ((nHtml.indexOf("__rnd__") > -1) || ((nHtml.indexOf("__uid__") > -1)))
@@ -584,6 +650,9 @@ SJL.extend("loadHtmlText", function (htmlText, onLoad, _clearHtml, _context_, _o
         var temp = document.createElement("div");
         temp.innerHTML = nHtml;
 
+        
+    
+
         var scripts = $(temp).$("script").do(function (currEl) {
             if (!_discardCssAndJs_)
                 eval(currEl.innerHTML);
@@ -602,16 +671,21 @@ SJL.extend("loadHtmlText", function (htmlText, onLoad, _clearHtml, _context_, _o
         nHtml = temp.innerHTML;
         
         //checks if to be clear the html
-        
-        
-        
-        //add the html to this.elements
-        //    this.do(function(c){c.innerHTML += htmlText;});
-        
+            
         c.innerHTML += nHtml;
+
+        this.autoLoadComponents(c, function(){
+            processeds++;
+            console.log("if (", processeds, " == ", this.elements.length, ")");
+            if (processeds == this.elements.length)
+            {
+                onLoad.call(_context_ || this, htmlText, this, _onLoadArguments_);
+            }
+        });
     });
+    //onLoad.call(_context_ || this, htmlText, this, _onLoadArguments_);
     
-    onLoad.call(_context_ || this, htmlText, this, _onLoadArguments_);
+    
 })
 
 SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
@@ -694,7 +768,7 @@ SJL.extend(["preloadHtml", "preload"], function (htmlFileName, onDone, _context_
 });
 
 
-SJL.extend("loadComponent", function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
+SJL.extend(["loadComponent", "loadStaticComponent"], function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
     if (htmlName.indexOf(".htm") == -1)
         htmlName += ".html";
     return this.loadHtml(htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
@@ -739,7 +813,8 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 
         }
     };
-	
+    
+    var elementsBackup = this.elements;
 	this.loadHtml(appName + ".html", function () {
         var appInstance = null;
         appArgumentsArray = appArgumentsArray || null;
@@ -753,6 +828,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         eval('if (typeof('+appName+') != "undefined"){ appInstance = new '+appName+'(appArgumentsArray, appSPointer);}else{console.log("SJL could not locate the class \'"+appName+"\'");}');
         
         this.elements[0].SJL_CurrAPP = appInstance;
+        appInstance.controlledElement = this.elements[0];
 
 		onLoad = onLoad || null;
         if (onLoad != null)
@@ -786,6 +862,9 @@ SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoa
         }
 
         temp = temp.replace(/\./g, "/");
+        //let stateObject = { foo: "bar" };
+        //history.pushState(stateObject, "page 2", "newpage.html");
+        
 
         this.loadApp(temp, onLoad, args, function(request){onNotLoad(request);}, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
     }
@@ -797,10 +876,13 @@ SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoa
 //monitores the url, autoloading apps
 SJL.extend(["autoLoadAppFromUrl", "autoLoadActivityFromUrl"], function (onNotLoad, onLoad, _forceFirst_, _prefixOrFolder_, _progressCallback_) {
     var __this = this;
+
+    /*window.onbeforeunload = function(){
+        preventDefault();
+    }*/
     window.onhashchange = function (event) {
         //event.preventDefault();
         __this.loadActivityFromUrl(onNotLoad, onLoad, _prefixOrFolder_, _progressCallback_);
-
     }
 
     _forceFirst_ == _forceFirst_ || null;
