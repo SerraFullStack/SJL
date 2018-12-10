@@ -460,7 +460,7 @@ SJL.extend(["includeUsingTags", "loadScriptUsingTags", "scriptUsingTags", "requi
     for (var c in scriptsSrc)
     {
         var type = "text/javascript";
-        if (scriptsSrc.indexOf(".css") == (scriptsSrc.length-4))
+        if (scriptsSrc[0].toLowerCase().endsWith(".css"))
             type = "text/css";
 
 
@@ -506,7 +506,7 @@ SJL.extend(["include", "loadScript", "script", "require"], function (scriptsSrc,
     for (var c in scriptsSrc)
     {
         var type = "text/javascript";
-        if (scriptsSrc.indexOf(".css") == (scriptsSrc.length-4))
+        if (scriptsSrc[c].toLowerCase().endsWith(".css"))
             type = "text/css";
 
         this.get(scriptsSrc[c], function(response){
@@ -516,8 +516,9 @@ SJL.extend(["include", "loadScript", "script", "require"], function (scriptsSrc,
                 //create the script element
                 var script = document.createElement("script");
                 //set the src of the new script
-
+                console.log("vai dar eval em "+scriptsSrc);
                 eval (response);
+                console.log("Feito");
             }
             else
             {
@@ -571,7 +572,6 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                 var active = currElement.getAttribute("SJLActive") ||
                 currElement.getAttribute("SJLInstanciate") ||
                 currElement.getAttribute("SJLIntance") || "none";
-                console.log("active", active);
                 
                 if ((active != "none") && (active != "") && (active != "false"))
                 {
@@ -621,9 +621,7 @@ SJL.extend("loadHtmlText", function (htmlText, onLoad, _clearHtml, _context_, _o
 
     var processeds = 0;
 
-    console.log("totalElements", this.elements.length);
     this.do(function(c){
-        console.log("passou");
         var nHtml = htmlText;
 
         if ((nHtml.indexOf("__rnd__") > -1) || ((nHtml.indexOf("__uid__") > -1)))
@@ -676,10 +674,14 @@ SJL.extend("loadHtmlText", function (htmlText, onLoad, _clearHtml, _context_, _o
 
         this.autoLoadComponents(c, function(){
             processeds++;
-            console.log("if (", processeds, " == ", this.elements.length, ")");
             if (processeds == this.elements.length)
             {
                 onLoad.call(_context_ || this, htmlText, this, _onLoadArguments_);
+
+                if (c.getAttribute("onload") != null)
+                {
+                    eval(c.getAttribute("onload"));
+                }
             }
         });
     });
