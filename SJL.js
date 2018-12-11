@@ -91,14 +91,22 @@
                 return this;//SJL;
 
             var vector = [];
+
+            if (selector.constructor !== Array)
+                selector = [selector];
+
+        
             for (var c in this.elements)
             {
-                //request the elements from DOM
-                var nodeList = this.elements[c].querySelectorAll(selector);
+                var currEl = this.elements[c];
+                selector.forEach(currSelector => {
+                    //request the elements from DOM
+                    var nodeList = currEl.querySelectorAll(currSelector);
 
-                //scrolls throught the elements and add its to "vector" array
-                for (var c = 0; c < nodeList.length; c++)
-                    vector.push(nodeList[c]);
+                    //scrolls throught the elements and add its to "vector" array
+                    for (var c = 0; c < nodeList.length; c++)
+                        vector.push(nodeList[c]);
+                });
             }
 
             //create a new _SJL with the vector of elements
@@ -180,19 +188,26 @@
 
         //create a vector to convert nodeList in to an array
         var vector = [];
+        
+        if (selector.constructor !== Array)
+            selector = [selector];
 
-        if (selector instanceof Element) {
-            vector.push(selector);
-        }
-        else if ((selector != null) && (selector != "")){
+        selector.forEach(currSelector => {
+            
+            
+            if (currSelector instanceof Element) {
+                vector.push(currSelector);
+            }
+            else if ((currSelector != null) && (currSelector != "")){
 
-            //request the elements from DOM
-            var nodeList = document.querySelectorAll(selector);
+                //request the elements from DOM
+                var nodeList = document.querySelectorAll(currSelector);
 
-            //scrolls throught the elements and add its to "vector" array
-            for (var c = 0; c < nodeList.length; c++)
-                vector.push(nodeList[c]);
-        }
+                //scrolls throught the elements and add its to "vector" array
+                for (var c = 0; c < nodeList.length; c++)
+                    vector.push(nodeList[c]);
+            }
+        });
 
         //create a new _SJL with the vector of elements
         ret = __getSJLInstance(vector, _forceNewInstance_);
@@ -324,7 +339,6 @@ SJL.extend(["animate", "ani"],  function (from, to, milisseconds, callback, endC
     //checks if animation is done
     if (currTime == __data__.time)
     {
-
         //call the end callback for each element in this _SJL instance
         if (__data__.endCallback != null) {
             __data__.endCallback.call(this, __data__.pointers);
@@ -389,9 +403,12 @@ SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callba
         //chama a função passada por parametro
         if (currVal != 15)
             callback.call(this, calculatedVal, _pointers_);
-        else
-            callback.call(this, to, _pointers_);
-    }, endCallback, _pointers_);
+        //else
+        //    callback.call(this, to, _pointers_);
+    }, function(){
+        callback.call(this, to, _pointers_);
+        endCallback.call(this);
+    }, _pointers_);
 
     return this;
 });
@@ -516,9 +533,7 @@ SJL.extend(["include", "loadScript", "script", "require"], function (scriptsSrc,
                 //create the script element
                 var script = document.createElement("script");
                 //set the src of the new script
-                console.log("vai dar eval em "+scriptsSrc);
                 eval (response);
-                console.log("Feito");
             }
             else
             {
@@ -697,7 +712,7 @@ SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _onFailure_, _cl
     
     //try to find the htmlName in loadedComponents
     var index = SJL._loadedComponents.findIndex(function(currEl){ 
-        return currEl.htmlName == htmlName;
+        return currEl.htmlName.toLowerCase() == htmlName.toLowerCase();
     });
 
     if (index == -1)
@@ -739,7 +754,7 @@ SJL.extend(["preloadHtml", "preload"], function (htmlFileName, onDone, _context_
     var loading = 0;
     for (var c = 0; c < htmlFileName.length; c++) {
         loading++;
-        if (htmlFileName[c].indexOf(".htm") == -1)
+        if ((htmlFileName[c].indexOf(".htm") == -1) && htmlFileName[c].indexOf(".js") == -1 && htmlFileName[c].indexOf(".css") == -1)
             htmlFileName[c] += ".html";
         //try to find the htmlName in loadedComponents
         var index = SJL._loadedComponents.findIndex(function (currEl) {
@@ -805,6 +820,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
             //dispose needs thats a callback is called to continue
             if (typeof(app.dispose) != 'undefined') //(app.hasOwnProperty("dispose"))
             {
+                var _this = this;
                 app.dispose(function(){
                     elementP.SJL_CurrAPP = null;
                     _this.loadApp(appName, onLoad, appArgumentsArray, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
@@ -817,10 +833,11 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
     };
     
     var elementsBackup = this.elements;
+    var appSPointer = this;
 	this.loadHtml(appName + ".html", function () {
         var appInstance = null;
         appArgumentsArray = appArgumentsArray || null;
-        var appSPointer = this;
+
 
         if (appName.indexOf("/") > 0) {
             appName = appName.split('/');
@@ -829,12 +846,12 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 
         eval('if (typeof('+appName+') != "undefined"){ appInstance = new '+appName+'(appArgumentsArray, appSPointer);}else{console.log("SJL could not locate the class \'"+appName+"\'");}');
         
-        this.elements[0].SJL_CurrAPP = appInstance;
-        appInstance.controlledElement = this.elements[0];
+        appSPointer.elements[0].SJL_CurrAPP = appInstance;
+        appInstance.controlledElement = appSPointer.elements[0];
 
 		onLoad = onLoad || null;
         if (onLoad != null)
-		    onLoad.call(_context_ || this, appInstance, this, _onLoadArguments_);
+		    onLoad.call(_context_ || appSPointer, appInstance, appSPointer, _onLoadArguments_);
 	}, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
 
     return this;
