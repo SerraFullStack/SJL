@@ -464,7 +464,7 @@ SJL.extend("cacheOrGet", function (url, callback, _context_, _callbackAditionalA
             var intervalWaiter = setInterval(function(_this){
                 var cachedDT = SJL.cache.get(url);
                 if (cachedDT != "loading"){
-                    clearInterval(cachedDT);
+                    clearInterval(intervalWaiter);
                     callback.call(_context_ || _this, SJL.cache.get(url), _callbackAditionalArgs_);
                 }
             }, 10, this);
