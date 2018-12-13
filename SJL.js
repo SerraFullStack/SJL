@@ -283,7 +283,7 @@ SJL.extend("getValue", function () {
     for (var c in this.elements)
     {
         var curr = this.elements[c];
-        if (curr.hasOwnProperty("value"))
+        if (typeof(curr.value) != 'undefined')
             ret.push(curr.value);
         else
             ret.push(curr.innerHTML);
@@ -421,8 +421,9 @@ SJL.extend("request", function (method, url, data, callback, _context_, _callbac
     if (typeof(_progressCallback_) != 'undefined')
     {
         xhttp.onprogress = function(evt){
-            if (evt.lengthComputable)
+            if ((evt.lengthComputable) && (_progressCallback_))
             {
+                console.log(url);
                 _progressCallback_.call(_context_ || this, 100.0 / evt.total * evt.loaded, evt.total, evt.loaded, url, evt, xhttp);
             }
         }
@@ -430,7 +431,8 @@ SJL.extend("request", function (method, url, data, callback, _context_, _callbac
     xhttp.onreadystatechange = function() {
         if (this.readyState == 4){// && this.status == 200) {
             if (callback != null) {
-                callback.call(_context_ || this, this.responseText, this, _callbackAditionalArgs_, xhttp);
+                
+                callback.call(_context_ || this, this.responseText, _callbackAditionalArgs_, xhttp, this);
             }
         }
     };
@@ -451,6 +453,36 @@ SJL.extend("request", function (method, url, data, callback, _context_, _callbac
 SJL.extend("get", function (url, callback, _context_, _callbackAditionalArgs_, _progressCallback_) {
     this.request("GET", url, null, callback, _context_, _callbackAditionalArgs_, _progressCallback_);
     return this;
+});
+
+
+
+SJL.extend("cacheOrGet", function (url, callback, _context_, _callbackAditionalArgs_, _progressCallback_) {
+    if (SJL.cache.exists(url)){
+        var cachedDT = SJL.cache.get(url);
+        if (cachedDT == "loading"){
+            var intervalWaiter = setInterval(function(_this){
+                var cachedDT = SJL.cache.get(url);
+                if (cachedDT != "loading"){
+                    clearInterval(cachedDT);
+                    callback.call(_context_ || _this, SJL.cache.get(url), _callbackAditionalArgs_);
+                }
+            }, 10, this);
+        }
+        else
+            callback.call(_context_ || this, SJL.cache.get(url), _callbackAditionalArgs_);
+    }
+    else {
+        SJL.cache.set(url, "loading", SJL.cache.destinations.RAM);
+        this.get(url, function(response, sjl, addArgs, request){
+            if ((request.status >= 200) && (request.status < 300)) {    
+                SJL.cache.set(url, response);
+            }
+            callback.call(_context_ || this, response, sjl, _callbackAditionalArgs_, request);
+        }, _context_, _callbackAditionalArgs_, _progressCallback_);
+        
+        return this;
+    }
 });
 
 SJL.extend("post", function (url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_) {
@@ -525,9 +557,8 @@ SJL.extend(["include", "loadScript", "script", "require"], function (scriptsSrc,
         var type = "text/javascript";
         if (scriptsSrc[c].toLowerCase().endsWith(".css"))
             type = "text/css";
-
-        this.get(scriptsSrc[c], function(response){
-
+        
+        this.cacheOrGet(scriptsSrc[c], function(response){
             if (type == "text/javascript")
             {
                 //create the script element
@@ -709,35 +740,17 @@ SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _onFailure_, _cl
     if (!SJL.hasOwnProperty("_loadedComponents"))
         SJL._loadedComponents = [];
     
+    this.cacheOrGet(htmlName, function (result, adicionalArgs,  request) {
+        if (!request || ((request.status >= 200) && (request.status < 300))) {    
+            this.loadHtmlText(result, onLoad, _clearHtml_, _context_, _onLoadArguments_);
+        }
+        else
+        {
+            if (typeof(_onFailure_) != 'undefined' && _onFailure_ != null)
+                _onFailure_.call (_context_ || this, request);
+        }
+    }, this, null, _progressCallback_);
     
-    //try to find the htmlName in loadedComponents
-    var index = SJL._loadedComponents.findIndex(function(currEl){ 
-        return currEl.htmlName.toLowerCase() == htmlName.toLowerCase();
-    });
-
-    if (index == -1)
-    {
-        //load the html file
-        this.get(htmlName, function (result, request) {
-            if ((request.status >= 200) && (request.status < 300)) {    
-                SJL._loadedComponents.push({ htmlName: htmlName, htmlContent: result, alreadyLoaded: true });
-                this.loadHtmlText(result, onLoad, _clearHtml_, _context_, _onLoadArguments_);
-            }
-            else
-            {
-                if (typeof(_onFailure_) != 'undefined' && _onFailure_ != null)
-                    _onFailure_.call (_context_ || this, request);
-            }
-        }, this, null, _progressCallback_);
-    }
-    else
-    {
-        //the property alreadyLoaded is used by the preloadHtml method to loadHTMl without start the javascript. Is this specific case, the javascript is started bellow
-        if (!SJL._loadedComponents[index].hasOwnProperty("alreadyLoaded"))
-            SJL._loadedComponents[index].alreadyLoaded = false;
-        this.loadHtmlText(SJL._loadedComponents[index].htmlContent, onLoad, _clearHtml_, _context_, _onLoadArguments_, SJL._loadedComponents[index].alreadyLoaded);
-        SJL._loadedComponents[index].alreadyLoaded = true;
-    }
 
     return this;
 });
@@ -748,38 +761,22 @@ SJL.extend(["preloadHtml", "preload"], function (htmlFileName, onDone, _context_
     if (htmlFileName.constructor !== Array)
         htmlFileName = [htmlFileName];
 
-    if (!SJL.hasOwnProperty("_loadedComponents"))
-        SJL._loadedComponents = [];
-
     var loading = 0;
     for (var c = 0; c < htmlFileName.length; c++) {
         loading++;
         if ((htmlFileName[c].indexOf(".htm") == -1) && htmlFileName[c].indexOf(".js") == -1 && htmlFileName[c].indexOf(".css") == -1)
             htmlFileName[c] += ".html";
-        //try to find the htmlName in loadedComponents
-        var index = SJL._loadedComponents.findIndex(function (currEl) {
-            return currEl.htmlName == htmlFileName[c];
-        });
-
-        if (index == -1) {
-            //load the html file
-            this.get(htmlFileName[c], function (result, xhr, contAtt) {
-                SJL._loadedComponents.push({ htmlName: htmlFileName[contAtt], htmlContent: result, alreadyLoaded: false });
-                loading--;
-            }, this, c, _progressCallback_);
-        }
-        else {
+        
+        //load the html file
+        this.cacheOrGet(htmlFileName[c], function (result, contAtt, xhr) {
+            SJL._loadedComponents.push({ htmlName: htmlFileName[contAtt], htmlContent: result, alreadyLoaded: false });
             loading--;
-        }
-    }
 
-    var waiter = setInterval(function () {
-        if (loading == 0)
-        {
-            clearTimeout(waiter);
-            onDone.call(_context_ || this);
-        }
-    }, 10);
+            if ((loading == 0) && (onDone))
+                onDone.call(_context_ || this);
+
+        }, this, c, _progressCallback_);
+    }
 
     return this;
 });
@@ -986,4 +983,72 @@ SJL.extend("getCssProperty", function(propertyName){
         return result;
 });
 
+
+SJL.cache = new (function(){
+    this.destinations={
+        RAM: "USERAM",
+        LOCALSTORAGE: "USELOCALSTORAGE",
+        DEFAULT: "DEFAULT"
+    };
+
+    this.defaultDestination = this.destinations.RAM;
+    this.ramCache = {};
+
+    this.set= function(key, data, _destination_){
+        _destination_ = _destination_ || this.defaultDestination;
+
+        if (_destination_ == this.destinations.LOCALSTORAGE)
+        {
+            localStorage.setItem("SJLCache__"+this.getValidKey(key), data);
+            delete this.ramCache[this.getValidKey(key)];
+        }
+        else
+        {
+            this.ramCache[this.getValidKey(key)] = data;
+            localStorage.removeItem("SJLCache__"+this.getValidKey(key));
+        }
+    };
+
+    this.get = function(key){
+
+        if (this.ramCache[this.getValidKey(key)])
+            return this.ramCache[this.getValidKey(key)];
+        else if (localStorage.hasOwnProperty("SJLCache__"+this.getValidKey(key)))
+            return localStorage.getItem("SJLCache__"+this.getValidKey(key));
+        else
+            return null;
+
+    };
+
+    this.exists = function(key){
+        return  typeof(this.ramCache[this.getValidKey(key)]) != 'undefined' ||
+                localStorage.hasOwnProperty("SJLCache__"+this.getValidKey(key))
+    },
+
+    this.del = function(key){
+
+        localStorage.removeItem("SJLCache__"+this.getValidKey(key));
+        delete this.ramCache[this.getValidKey(key)];
+    },
+    
+    this.clear = function(){
+        for (var p in localStorage){
+            if (p.startsWith("SJLCache__"))
+                delete localStorage[p];
+        }
+
+        this.ramCache = {};
+    },
+
+
+    this.getValidKey = function(key){
+        var ret = "";
+        for (var c = 0; c < key.length; c++){
+            if ("abcdefghijklmnopqrsuvxywz1234567890ABCDEFGHIJKLMNOPQRSTUVXYWZ".indexOf(key[c]) > -1)
+                ret += key[c];
+        }
+
+        return ret;
+    }
+});
 
