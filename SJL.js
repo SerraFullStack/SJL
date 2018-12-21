@@ -120,7 +120,7 @@
         this.$ = this.S;
 
         this._importElementsPoperties();
-    }
+    };
 
     /** Returns a new _SJL instance to work with elements catched by css selector argument "selector" 
      * @param {string} selector - The css selector that will be used to select a list of elements (or unique element) from DOM. These elements are puted in the "elements" property of new _SJL instance
@@ -133,7 +133,7 @@
         currIndex:0,
         instances:[],
         _infoTotalUses: 0
-     }
+     };
 
      //allow the limitation of instance os SJL. If used a pool of instances will be used. The application can use 
      //_forceNewInstance_ to ignore pool and create a permanent instance.
@@ -148,7 +148,7 @@
             for (var c = 0; c < maxIntances; c++)
                 __SJLPool.instances[c] = new _SJL();
         }
-     }
+     };
 
     //the argument _forceNewInstance_ just do effect if the pool of instances is in use
     __getSJLInstance = function(vector, _forceNewInstance_)
@@ -177,7 +177,7 @@
             return ret;
             
         }
-     }
+     };
 
     //the argument _forceNewInstance_ just do effect if the pool of instances is in use
     S = function(selector, _forceNewInstance_)
@@ -740,7 +740,7 @@ SJL.extend("loadHtmlText", function (htmlText, onLoad, _clearHtml, _context_, _o
     //onLoad.call(_context_ || this, htmlText, this, _onLoadArguments_);
     
     
-})
+});
 
 SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
     if (!SJL.hasOwnProperty("_loadedComponents"))
@@ -1066,13 +1066,13 @@ SJL.cache = new (function(){
     this.exists = function(key){
         return  typeof(this.ramCache[this.getValidKey(key)]) != 'undefined' ||
                 localStorage.hasOwnProperty("SJLCache__"+this.getValidKey(key))
-    },
+    };
 
     this.del = function(key){
 
         localStorage.removeItem("SJLCache__"+this.getValidKey(key));
         delete this.ramCache[this.getValidKey(key)];
-    },
+    };
     
     this.clear = function(){
         for (var p in localStorage){
@@ -1081,7 +1081,7 @@ SJL.cache = new (function(){
         }
 
         this.ramCache = {};
-    },
+    };
 
 
     this.getValidKey = function(key){
@@ -1092,7 +1092,7 @@ SJL.cache = new (function(){
         }
 
         return ret;
-    }
+    };
 });
 
 /** This class can be used to monitor some varible or data.
@@ -1149,11 +1149,11 @@ SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _logErrors_){
 
     this.watch = function(varName_Or_GetValueFunc, func, _context_, _logErrors_){
         SJL._watches.push({variableOrFunc: varName_Or_GetValueFunc, func: func,  logErrors: _logErrors_, lastValue: "---invalid---value---sjl---interval---value", context: _context_ || window});
-    }
+    };
 
     if ((varName_Or_GetValueFunc) && (func))
         this.watch(varName_Or_GetValueFunc, func, _context_, typeof(_logErrors_) == 'undefined'? true : _logErrors_);
-}
+};
 
 
 SJL.SJLStartConf ={
@@ -1173,4 +1173,4 @@ SJL.start = function(_conf_){
 
     if (_conf_.usePermanentCache || false)
         SJL.cache.defaultDestination = SJL.cache.destinations.LOCALSTORAGE;
-}
+};
