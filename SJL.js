@@ -155,7 +155,7 @@
     {
         if ((!__SJLPool.use) || (_forceNewInstance_ === true))
         {
-            if (_forceNewInstance_ === true)
+            if ((__SJLPool.use) && (_forceNewInstance_ === true))
                 console.log("new SJL instance has forced");
             return new _SJL(vector)
         }
@@ -478,7 +478,7 @@ SJL.extend("cacheOrGet", function (url, callback, _context_, _callbackAditionalA
             if ((request.status >= 200) && (request.status < 300)) {    
                 SJL.cache.set(url, response);
             }
-            callback.call(_context_ || this, response, sjl, _callbackAditionalArgs_, request);
+            callback.call(_context_ || this, response, _callbackAditionalArgs_, request, sjl);
         }, _context_, _callbackAditionalArgs_, _progressCallback_);
         
         return this;
@@ -627,9 +627,14 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
 
                         //app and SJL_CurrAPP has are same value
                         newInstance.controlledElement.app = newInstance;
+                        newInstance.controlledElement.instance = newInstance;
+                        newInstance.controlledElement.appInstance = newInstance;
+                        newInstance.controlledElement.classInstance = newInstance;
+                        newInstance.controlledElement.activeInstance = newInstance;
                         if (waitings == length)
                         {
-                            onDone.call(_this);
+                            if (onDone)
+                                onDone.call(_this);
                         }
                     });
                 }
@@ -650,7 +655,8 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                 waitings++;
                 if (waitings == length)
                 {
-                    onDone.call(_this);
+                    if (onDone)
+                        onDone.call(_this);
                 }
             }
         });
@@ -746,7 +752,7 @@ SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _onFailure_, _cl
         }
         else
         {
-            if (typeof(_onFailure_) != 'undefined' && _onFailure_ != null)
+            if (_onFailure_)
                 _onFailure_.call (_context_ || this, request);
         }
     }, this, null, _progressCallback_);
@@ -890,6 +896,20 @@ SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoa
 });
 
 //monitores the url, autoloading apps
+/** When this method is called, the SJL will start to monitor changes in the location.href
+ *  and will, automatically, load activities when the url is changed. 
+ * @param {function} onNotLoad - A function to be called when SJL encounters an error to load an activity 
+ * @param {function} onLoad - A function to be called when SJL loads an activity with sucessfull
+ * @param {boolean} _forceFirst_ - Indicates if the SJL must parse the current URL. This argument is optional 
+ *                               - and its defautl value is 'true'. If you pass 'false' to this, the SJL just will load first activity when the 
+ *                               - url is changed by first time.
+ * @param {boolean} _prefixOrFolder_ - Uses a prefix folder for load activities. It can be used to best organize 
+ *                                   - application and prevent poluition of the url. Example: If you specify 
+ *                                   - 'MyApp/MyActivities' for this parameter and try to open url 
+ *                                   - 'myAppUrl.com/#Main', the SJL will try to locate the activity 'main' 
+ *                                   - inside a folder named 'MyActivities', which is inside of another folder 
+ *                                   - named ''MyApp'.
+ * */
 SJL.extend(["autoLoadAppFromUrl", "autoLoadActivityFromUrl"], function (onNotLoad, onLoad, _forceFirst_, _prefixOrFolder_, _progressCallback_) {
     var __this = this;
 
@@ -934,6 +954,10 @@ SJL.extend(["unLoadApp", "unLoadActivity"], function (appName, onLoad, appArgume
     return this;
 });
 
+/** Set a property in the elements
+ * @param {string} name - the name of property
+ * @param {any} value - the property value
+ */
 SJL.extend("setProperty", function (name, value) {
     for (var c in this.elements)
         eval("this.elements[c]." + name + " = value;");
@@ -941,6 +965,14 @@ SJL.extend("setProperty", function (name, value) {
     return this;
 });
 
+/** Get a property from the elements
+ * @param {string} name - the property name
+ * @param {any} _defaultValue_ - A value that will be return if the system not locate the property in anyone element
+ * @returns {any} - If SJL is working with one element, this methos returns a value of property or _defaultValue_. If 
+ * the SJL instance is working with a list of elements, the return will be an array with values of 'name' 
+ * (only for elements that contais the property specified by 'name'). If the SJL is working with a list of elements and
+ * anyone element contains the property specified by 'name', this methos will return _defaultValue_
+ */
 SJL.extend("getProperty", function (name, _defaultValue_) {
     _defaultValue_ = _defaultValue_ || null;
     var ret = [];
@@ -956,7 +988,9 @@ SJL.extend("getProperty", function (name, _defaultValue_) {
         return _defaultValue_;
 });
 
-SJL.extend(["delete", "exclude"], function () {
+
+/** Remove elements from their parent */
+SJL.extend(["remove", "exclude"], function () {
     for (var c in this.elements) {
         this.elements[c].parentNode.removeChild(this.elements[c]);
         delete this.elements[c];
@@ -966,8 +1000,15 @@ SJL.extend(["delete", "exclude"], function () {
 
 });
 
-
-SJL.extend("getCssProperty", function(propertyName){
+/** Get a css property from elements
+ * @param {string} propertyName - the css property name
+ * @param {any} _defaultValue - The value to be return when the property was not found in anyone element. This 
+ * parameter is optional, and its default value is null.
+ * @returns {any} - return the css value or a list of css values (if SJL instance is working with more than 
+ * one element). If the property was not found, the SJL will return _defaultValue_.
+ */
+SJL.extend("getCssProperty", function(propertyName, _defaultValue_){
+    _defaultValue_ = _defaultValue_ || null;
     var result = [];
     for (var c in this.elements)
     {
@@ -979,8 +1020,10 @@ SJL.extend("getCssProperty", function(propertyName){
 
     if (result.length == 1)
         return result[0];
-    else
+    else if (result.lengh > 1)
         return result;
+    else 
+        return _defaultValue_;
 });
 
 
@@ -1052,3 +1095,82 @@ SJL.cache = new (function(){
     }
 });
 
+/** This class can be used to monitor some varible or data.
+ * @param {object} varName_Or_GetValueFunc - A string with a path to variable or property or a function that return some value
+ * @param {Function} func - A function to be called when the varname_Or_GetValueFunc value or return value is changed
+ * @param {object} _context_ - A context to execute 'func' and 'varName_Or_GetValueFun' (when a function is passed to this argument). This parameter is optional and default value is null (system will use 'window' object as context)
+ * @param {boolean} _logErrors_ - If true, errors during functions executions will be logged in the console. This parameter is optional and default value is "true"
+ */
+SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _logErrors_){
+
+    //check if the watches system was alrady started. If not, star this
+    if (!SJL._watches)
+    {
+        //creates the vector to contains the observations data
+        SJL._watches = [];
+
+        //create a interval to monitor the variables and call functions
+        setInterval(() =>{
+            SJL._watches.forEach(element => {
+                try{
+                    var exists = false;
+                    var currVal = null; 
+
+                    //checks if current variable still exists
+                    if (typeof(element.variableOrFunc) == 'function')
+                        exists = true
+                    else
+                        eval ("exists = typeof("+element.variableOrFunc+") != 'undefined'");
+
+                    if (exists){
+                        //get the current value of the variable or return of function
+                        if (typeof(element.variableOrFunc) == 'function')
+                            currVal = element.variableOrFunc.call(element.context);
+                        else
+                            eval ("currVal = "+element.variableOrFunc);
+                        
+                        //checks if the value was changed
+                        if (currVal != element.lastValue){
+                            //call de observation function
+                            element.func.call(element.context, currVal, element.lastValue);
+
+                            //update the lastValue (to look for new changes)
+                            element.lastValue = currVal;
+                        };
+                        element.lastValue = currVal;
+                    }
+                }catch(error){
+                    if (element.logErrors)
+                        console.error(error);
+                }
+            });
+        }, 10);
+    }
+
+    this.watch = function(varName_Or_GetValueFunc, func, _context_, _logErrors_){
+        SJL._watches.push({variableOrFunc: varName_Or_GetValueFunc, func: func,  logErrors: _logErrors_, lastValue: "---invalid---value---sjl---interval---value", context: _context_ || window});
+    }
+
+    if ((varName_Or_GetValueFunc) && (func))
+        this.watch(varName_Or_GetValueFunc, func, _context_, typeof(_logErrors_) == 'undefined'? true : _logErrors_);
+}
+
+
+SJL.SJLStartConf ={
+    useInstancesPool: false,
+    maxPoolInstances: 50,
+    usePermanentCache: false,
+    autoLoadComponents: true
+};
+SJL.start = function(_conf_){
+    _conf_ = _conf_ || SJL.SJLStartConf;
+
+    if (typeof(_conf_.autoLoadComponents) == 'undefined' || _conf_.autoLoadComponents == true)
+        SJL.autoLoadComponents(document.body);
+
+    if (_conf_.useInstancesPool || false)
+        __setSJLInstancesPool(true, _conf_.maxPoolInstances || 50, false)
+
+    if (_conf_.usePermanentCache || false)
+        SJL.cache.defaultDestination = SJL.cache.destinations.LOCALSTORAGE;
+}
