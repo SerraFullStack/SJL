@@ -272,6 +272,8 @@ SJL.extend("setValue", function (data) {
             }
             else
                 curr.innerHTML = data;
+
+            this.autoLoadComponents(this.elements[c], function(){});
         }
     }
 
@@ -617,7 +619,7 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                 //SJL_CurrAPP
                 var active = currElement.getAttribute("SJLActive") ||
                 currElement.getAttribute("SJLInstanciate") ||
-                currElement.getAttribute("SJLIntance") || "none";
+                currElement.getAttribute("SJLInstance") || "yes";
                 
                 if ((active != "none") && (active != "") && (active != "false"))
                 {
@@ -977,7 +979,7 @@ SJL.extend("getProperty", function (name, _defaultValue_) {
     _defaultValue_ = _defaultValue_ || null;
     var ret = [];
     for (var c in this.elements) {
-        eval("if (this.elements[c].hasOwnProperty('"+name+"')){ret.push(this.elements[c]." + name + ");}");
+        eval("if (this.elements[c]."+name+"){ret.push(this.elements[c]." + name + ");}");
     }
 
     if (ret.length == 1)
