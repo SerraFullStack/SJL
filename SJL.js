@@ -417,15 +417,31 @@ SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callba
 
 
 
-SJL.extend("request", function (method, url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_) {
+SJL.extend("request", function (method, url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_) {
     callback = callback || null;
     var xhttp = new XMLHttpRequest();
+    //set headers
+
+    xhttp.open(method, url, true);
+    xhttp.method = method.toUpperCase();
+
+    if ((data) && (typeof(data) != "string")){
+        data = JSON.stringify(data);
+        xhttp.setRequestHeader("Content-Type", "Application/Json");
+    }
+    
+    if (_optionalHeaders_)
+    {
+        _optionalHeaders_.forEach(element => {
+            xhttp.setRequestHeader(element[0], element[1]);
+        });
+    }
+
     if (typeof(_progressCallback_) != 'undefined')
     {
         xhttp.onprogress = function(evt){
             if ((evt.lengthComputable) && (_progressCallback_))
             {
-                console.log(url);
                 _progressCallback_.call(_context_ || this, 100.0 / evt.total * evt.loaded, evt.total, evt.loaded, url, evt, xhttp);
             }
         }
@@ -433,13 +449,20 @@ SJL.extend("request", function (method, url, data, callback, _context_, _callbac
     xhttp.onreadystatechange = function() {
         if (this.readyState == 4){// && this.status == 200) {
             if (callback != null) {
-                
-                callback.call(_context_ || this, this.responseText, _callbackAditionalArgs_, xhttp, this);
+                var resp = this.responseText;
+                if (xhttp.getResponseHeader("Content-Type").toLowerCase().indexOf("application/json") > -1)
+                    resp = JSON.parse(resp);
+
+                callback.call(_context_ || this, resp, _callbackAditionalArgs_, xhttp, this);
             }
         }
     };
-    xhttp.open(method, url, true);
-    xhttp.method = method.toUpperCase();
+
+    
+    
+    if (_onBeforeSend_)
+        _onBeforeSend_.call(_context_, xhttp);
+        
     if ("post put".indexOf(method.toLowerCase()) > -1)
     {
         xhttp.send(data);
@@ -452,14 +475,14 @@ SJL.extend("request", function (method, url, data, callback, _context_, _callbac
     return this;
 });
 
-SJL.extend("get", function (url, callback, _context_, _callbackAditionalArgs_, _progressCallback_) {
-    this.request("GET", url, null, callback, _context_, _callbackAditionalArgs_, _progressCallback_);
+SJL.extend("get", function (url, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_) {
+    this.request("GET", url, null, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_);
     return this;
 });
 
 
 
-SJL.extend("cacheOrGet", function (url, callback, _context_, _callbackAditionalArgs_, _progressCallback_) {
+SJL.extend("cacheOrGet", function (url, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_) {
     if (SJL.cache.exists(url)){
         var cachedDT = SJL.cache.get(url);
         if (cachedDT == "loading"){
@@ -481,24 +504,24 @@ SJL.extend("cacheOrGet", function (url, callback, _context_, _callbackAditionalA
                 SJL.cache.set(url, response);
             }
             callback.call(_context_ || this, response, _callbackAditionalArgs_, request, sjl);
-        }, _context_, _callbackAditionalArgs_, _progressCallback_);
+        }, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_);
         
         return this;
     }
 });
 
-SJL.extend("post", function (url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_) {
-    this.request("POST", url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_);
+SJL.extend("post", function (url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_) {
+    this.request("POST", url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_);
     return this;
 });
 
-SJL.extend("put", function (url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_) {
-    this.request("PUT", url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_);
+SJL.extend("put", function (url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_) {
+    this.request("PUT", url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_);
     return this;
 });
 
-SJL.extend("delete", function (url, callback, _context_, _callbackAditionalArgs_, _progressCallback_) {
-    this.request("DELETE", url, null, callback, _context_, _callbackAditionalArgs_, _progressCallback_);
+SJL.extend("delete", function (url, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_) {
+    this.request("DELETE", url, null, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_);
     return this;
 });
 
@@ -623,7 +646,7 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                 
                 if ((active != "none") && (active != "") && (active != "false"))
                 {
-                    console.log("active instance")
+                    console.log("active instance");
                     $(currElement).loadActiveComponent(componentName, function(newInstance){
                         waitings++;
 
@@ -854,6 +877,25 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         appSPointer.elements[0].SJL_CurrAPP = appInstance;
         appInstance.controlledElement = appSPointer.elements[0];
 
+        //create refeerences to appIntance in all subElements 
+        appSPointer.$("*").do((currEl) => {
+            //don't set appInstance property, because it is used by SJL to destroy activities. If you use appInstance here and try to load a component inside the elements of appSPointer, the curren appInstance will be destroyed (the desctructor function will be called);
+            currEl.ctrl = appInstance;
+            currEl.app = appInstance;
+            currEl.activity = appInstance;
+            currEl.self = appInstance;
+            currEl._this = appInstance;
+        });
+        
+        //create a reference to appSPointer in appInstance (create a new SJL, ignoring the use of pool, i.e., creating a permanent instance)
+        var fixAppSPointer = $(appSPointer.elements, true);
+        appInstance.rootS = fixAppSPointer;
+        appInstance.containerSElement = fixAppSPointer;
+        appInstance.bodyS = fixAppSPointer;
+        appInstance.htmlS = fixAppSPointer;
+
+
+
 		onLoad = onLoad || null;
         if (onLoad != null)
 		    onLoad.call(_context_ || appSPointer, appInstance, appSPointer, _onLoadArguments_);
@@ -918,10 +960,11 @@ SJL.extend(["autoLoadAppFromUrl", "autoLoadActivityFromUrl"], function (onNotLoa
     /*window.onbeforeunload = function(){
         preventDefault();
     }*/
-    window.onhashchange = function (event) {
+
+    window.addEventListener("hashchange", function (event) {
         //event.preventDefault();
         __this.loadActivityFromUrl(onNotLoad, onLoad, _prefixOrFolder_, _progressCallback_);
-    }
+    });
 
     _forceFirst_ == _forceFirst_ || null;
     if (_forceFirst_ == null)
@@ -1103,8 +1146,8 @@ SJL.cache = new (function(){
  * @param {object} _context_ - A context to execute 'func' and 'varName_Or_GetValueFun' (when a function is passed to this argument). This parameter is optional and default value is null (system will use 'window' object as context)
  * @param {boolean} _logErrors_ - If true, errors during functions executions will be logged in the console. This parameter is optional and default value is "true"
  */
-SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _logErrors_){
-
+SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _logErrors_, _stopOnError_){
+    
     //check if the watches system was alrady started. If not, star this
     if (!SJL._watches)
     {
@@ -1113,48 +1156,76 @@ SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _logErrors_){
 
         //create a interval to monitor the variables and call functions
         setInterval(() =>{
+            currIndex = -1;
             SJL._watches.forEach(element => {
+                currIndex++;
                 try{
-                    var exists = false;
-                    var currVal = null; 
 
-                    //checks if current variable still exists
-                    if (typeof(element.variableOrFunc) == 'function')
-                        exists = true
-                    else
-                        eval ("exists = typeof("+element.variableOrFunc+") != 'undefined'");
+                    if (element != null)
+                    {
+                        var exists = false;
+                        var currVal = null; 
 
-                    if (exists){
-                        //get the current value of the variable or return of function
+                        //checks if current variable still exists
                         if (typeof(element.variableOrFunc) == 'function')
-                            currVal = element.variableOrFunc.call(element.context);
+                            exists = true;
                         else
-                            eval ("currVal = "+element.variableOrFunc);
-                        
-                        //checks if the value was changed
-                        if (currVal != element.lastValue){
-                            //call de observation function
-                            element.func.call(element.context, currVal, element.lastValue);
+                            eval("exists = typeof("+element.variableOrFunc+") != 'undefined'");
 
-                            //update the lastValue (to look for new changes)
+                        if (exists){
+                            //get the current value of the variable or return of function
+                            if (typeof(element.variableOrFunc) == 'function')
+                                currVal = element.variableOrFunc.call(element.context);
+                            else
+                                eval ("currVal = "+element.variableOrFunc);
+                            
+                            //checks if the value was changed
+                            if (currVal != element.lastValue){
+                                //call de observation function
+                                element.func.call(element.context, currVal, element.lastValue);
+
+                                //update the lastValue (to look for new changes)
+                                element.lastValue = currVal;
+                            };
                             element.lastValue = currVal;
-                        };
-                        element.lastValue = currVal;
+                        }
                     }
                 }catch(error){
-                    if (element.logErrors)
-                        console.error(error);
+                    try{
+                        if (element.stopOnError)
+                            SJL._watches[currIndex] = null;
+
+                        if (element.logErrors)
+                            console.error(error);
+                    }catch(SJLError){
+                        SJL._watches[currIndex] = null;
+                        console.error("SJL Watch internal error: ", SJLError);
+                    }
                 }
             });
         }, 10);
     }
 
-    this.watch = function(varName_Or_GetValueFunc, func, _context_, _logErrors_){
-        SJL._watches.push({variableOrFunc: varName_Or_GetValueFunc, func: func,  logErrors: _logErrors_, lastValue: "---invalid---value---sjl---interval---value", context: _context_ || window});
+    this.indexes = [];
+
+
+    this.watch = function(varName_Or_GetValueFunc, func, _context_, _logErrors_, _stopOnError_){
+        if(typeof(_stopOnError_) == 'undefined')
+            _stopOnError_ = true;
+        _logErrors_ = typeof(_logErrors_) == 'undefined'? true : _logErrors_;
+
+        this.indexes.push(SJL._watches.length);
+        SJL._watches.push({variableOrFunc: varName_Or_GetValueFunc, func: func,  logErrors: _logErrors_, stopOnError: _stopOnError_,lastValue: "---invalid---value---sjl---interval---value", context: _context_ || window});
+    };
+
+    this.stop = function(){
+        this.indexes.forEach(element => {
+            SJL._watches[element] = null;
+        });
     };
 
     if ((varName_Or_GetValueFunc) && (func))
-        this.watch(varName_Or_GetValueFunc, func, _context_, typeof(_logErrors_) == 'undefined'? true : _logErrors_);
+        this.watch(varName_Or_GetValueFunc, func, _context_, _logErrors_, _stopOnError_);
 };
 
 
@@ -1164,6 +1235,7 @@ SJL.SJLStartConf ={
     usePermanentCache: false,
     autoLoadComponents: true
 };
+
 SJL.start = function(_conf_){
     _conf_ = _conf_ || SJL.SJLStartConf;
 
@@ -1171,7 +1243,7 @@ SJL.start = function(_conf_){
         SJL.autoLoadComponents(document.body);
 
     if (_conf_.useInstancesPool || false)
-        __setSJLInstancesPool(true, _conf_.maxPoolInstances || 50, false)
+        __setSJLInstancesPool(true, _conf_.maxPoolInstances || 50, false);
 
     if (_conf_.usePermanentCache || false)
         SJL.cache.defaultDestination = SJL.cache.destinations.LOCALSTORAGE;
