@@ -25,11 +25,12 @@
          * @param {Function} func - The function to be called with the current element and this instance of SJL by parameter
          * @param {object} _context_ - An optional context to call "func". If not passed, the current instance of _SJL will be used as context
          */
-        this.do = function(func, _context_){
+        this.do = function(func, _context_, _args_){
             _context_ = _context_ || this;
+
             for (c in this.elements)
             {
-                func.call(_context_, this.elements[c], _context_);
+                func.call(_context_, this.elements[c], _context_, _args_);
             }
 
             return this;
@@ -879,20 +880,32 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 
         //create refeerences to appIntance in all subElements 
         appSPointer.$("*").do((currEl) => {
-            //don't set appInstance property, because it is used by SJL to destroy activities. If you use appInstance here and try to load a component inside the elements of appSPointer, the curren appInstance will be destroyed (the desctructor function will be called);
-            currEl.ctrl = appInstance;
-            currEl.app = appInstance;
-            currEl.activity = appInstance;
-            currEl.self = appInstance;
-            currEl._this = appInstance;
+            eval ("currEl."+appName+"=appInstance");
+            eval ("currEl."+appName+"Instance=appInstance");
+
+            //create a camelized name
+            var camelizedAppName = appName[0].toLowerCase() + (appName.length > 1 ? appName.substring(1) : "");
+            eval ("currEl."+camelizedAppName+"=appInstance");
+            
+            if (!currEl.app){
+                //don't set appInstance property, because it is used by SJL to destroy activities. If you use appInstance here and try to load a component inside the elements of appSPointer, the curren appInstance will be destroyed (the desctructor function will be called);
+                currEl.ctrl = appInstance;
+                currEl.app = appInstance;
+            }
+            else 
+                console.log(currEl.app); 
         });
+
+        console.log(appInstance.constructor);
         
         //create a reference to appSPointer in appInstance (create a new SJL, ignoring the use of pool, i.e., creating a permanent instance)
         var fixAppSPointer = $(appSPointer.elements, true);
-        appInstance.rootS = fixAppSPointer;
-        appInstance.containerSElement = fixAppSPointer;
-        appInstance.bodyS = fixAppSPointer;
-        appInstance.htmlS = fixAppSPointer;
+        if (!appInstance.rootS){
+            appInstance.rootS = fixAppSPointer;
+            appInstance.containerSElement = fixAppSPointer;
+            appInstance.bodyS = fixAppSPointer;
+            appInstance.htmlS = fixAppSPointer;
+        }
 
 
 
