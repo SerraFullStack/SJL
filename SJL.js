@@ -909,12 +909,11 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         if (!appInstance.rootS){
 			appInstance.sRoot = fixAppSPointer;
             appInstance.rootS = fixAppSPointer;
-            appInstance.root = fixAppSPointer;
             appInstance.html = fixAppSPointer;
             appInstance.body = fixAppSPointer;
             appInstance.containerSElement = fixAppSPointer;
-            appInstance.bodyS = fixAppSPointer;
-            appInstance.htmlS = fixAppSPointer;
+            eval("appInstance." + camelizedAppName +"=fixAppSPointer")
+
         }
 
 
