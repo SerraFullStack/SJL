@@ -867,13 +867,16 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         var appInstance = null;
         appArgumentsArray = appArgumentsArray || null;
 
+        //create a reference to appSPointer in appInstance (create a new SJL, ignoring the use of pool, i.e., creating a permanent instance)
+        var fixAppSPointer = $(appSPointer.elements, true);
+
 
         if (appName.indexOf("/") > 0) {
             appName = appName.split('/');
             appName = appName[appName.length - 1];
         }
 
-        eval('if (typeof('+appName+') != "undefined"){ appInstance = new '+appName+'(appArgumentsArray, appSPointer);}else{console.log("SJL could not locate the class \'"+appName+"\'");}');
+        eval('if (typeof(' + appName + ') != "undefined"){ appInstance = new ' + appName +'(fixAppSPointer, appArgumentsArray);}else{console.log("SJL could not locate the class \'"+appName+"\'");}');
         
         appSPointer.elements[0].SJL_CurrAPP = appInstance;
         appInstance.controlledElement = appSPointer.elements[0];
@@ -902,8 +905,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 
         console.log(appInstance.constructor);
         
-        //create a reference to appSPointer in appInstance (create a new SJL, ignoring the use of pool, i.e., creating a permanent instance)
-        var fixAppSPointer = $(appSPointer.elements, true);
+        
         if (!appInstance.rootS){
 			appInstance.SRoot = fixAppSPointer;
             appInstance.rootS = fixAppSPointer;
