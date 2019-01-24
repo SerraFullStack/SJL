@@ -902,8 +902,6 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                 currEl.app = appInstance;
             }
         });
-
-        console.log(appInstance.constructor);
         
         
         if (!appInstance.rootS){
@@ -915,6 +913,32 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
             eval("appInstance." + camelizedAppName +"=fixAppSPointer")
 
         }
+
+        //process attributes of container element, and for each attribute, add this to new appInstance as a property
+        appSPointer.do((curr) =>{
+            var attributes = curr.getAttributeNames();
+            attributes.forEach((currAttribute) =>{
+                var value = curr.getAttribute(currAttribute);
+                var setName = "set"+currAttribute[0].toUpperCase() + (currAttribute.length > 1 ? currAttribute.substring(1) : "");
+
+                eval("if (typeof(appInstance." + setName + ") != 'undefined'){ appInstance." + setName + ".call(appInstance, value); } else { appInstance." + currAttribute+" = value;}");
+            });
+        });
+
+
+        //try call new instance initilizers
+        //{
+            /*if (typeof (appInstance.constructor) != 'undefined')
+                appInstance.constructor();*/
+            if (typeof (appInstance.init) != 'undefined')
+                appInstance.init(appArgumentsArray);
+            if (typeof (appInstance.initialize) != 'undefined')
+                appInstance.initialize(appArgumentsArray);
+            if (typeof (appInstance.start) != 'undefined')
+                appInstance.start(appArgumentsArray);
+            if (typeof (appInstance.create) != 'undefined')
+                appInstance.create(appArgumentsArray);
+        //}
 
 
 
