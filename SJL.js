@@ -877,9 +877,12 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         
         appSPointer.elements[0].SJL_CurrAPP = appInstance;
         appInstance.controlledElement = appSPointer.elements[0];
+        
+        var camelizedAppName = appName[0].toLowerCase() + (appName.length > 1 ? appName.substring(1) : "");
 
-		eval ("appSPointer."+appName+"=appInstance");
-		eval ("appSPointer."+camelizedAppName+"=appInstance");
+		eval ("appSPointer.setProperty('"+appName+"', appInstance)");
+        eval("appSPointer.setProperty('" + appName + "Instance', appInstance)");
+		eval ("appSPointer.setProperty('"+camelizedAppName+"', appInstance)");
 		
         //create refeerences to appIntance in all subElements 
         appSPointer.$("*").do((currEl) => {
@@ -887,7 +890,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
             eval ("currEl."+appName+"Instance=appInstance");
 
             //create a camelized name
-            var camelizedAppName = appName[0].toLowerCase() + (appName.length > 1 ? appName.substring(1) : "");
+            
             eval ("currEl."+camelizedAppName+"=appInstance");
             
             if (!currEl.app){
@@ -895,8 +898,6 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                 currEl.ctrl = appInstance;
                 currEl.app = appInstance;
             }
-            else 
-                console.log(currEl.app); 
         });
 
         console.log(appInstance.constructor);
