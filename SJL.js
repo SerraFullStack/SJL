@@ -921,7 +921,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                 var value = curr.getAttribute(currAttribute);
                 var setName = "set"+currAttribute[0].toUpperCase() + (currAttribute.length > 1 ? currAttribute.substring(1) : "");
 
-                eval("if (typeof(appInstance." + setName + ") != 'undefined'){ appInstance." + setName + ".call(appInstance, value); } else { appInstance." + currAttribute+" = value;}");
+                eval("if (typeof(appInstance." + setName + ") != 'undefined'){ appInstance." + setName + ".call(appInstance, value); }appInstance." + currAttribute+" = value;");
             });
         });
 
