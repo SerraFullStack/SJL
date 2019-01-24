@@ -863,6 +863,12 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
     
     var elementsBackup = this.elements;
     var appSPointer = this;
+
+    //convert innerHTML to an attribute, to be sented to appInstance
+    appSPointer.do((curr) => {
+        curr.setAttribute("content", curr.innerHTML);
+    });
+
 	this.loadHtml(appName + ".html", function () {
         var appInstance = null;
         appArgumentsArray = appArgumentsArray || null;
@@ -917,6 +923,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         //process attributes of container element, and for each attribute, add this to new appInstance as a property
         appSPointer.do((curr) =>{
             var attributes = curr.getAttributeNames();
+            curr.setAttribute("htmlContent", curr.innerHTML);
             attributes.forEach((currAttribute) =>{
                 var value = curr.getAttribute(currAttribute);
                 var setName = "set"+currAttribute[0].toUpperCase() + (currAttribute.length > 1 ? currAttribute.substring(1) : "");
@@ -1080,6 +1087,29 @@ SJL.extend("getProperty", function (name, _defaultValue_) {
 });
 
 
+SJL.extend("setCssProperty", function (property, value) {
+    for (var c in this.elements)
+        this.elements[c].style.setProperty(property, value);
+
+    return this;
+});
+
+SJL.extend("getCssProperty", function (property, _defaultValue_) {
+    var ret = [];
+    for (var c in this.elements) {
+        var value = this.elements[c].style.getPropertyValue(property);
+
+        ret.push(value);
+    }
+
+    if ((ret.length == 1) && (ret[0] != ""))
+        return ret[0];
+    else if (ret.length > 1)
+        return ret;
+    else
+        return _defaultValue_;
+});
+
 /** Remove elements from their parent */
 SJL.extend(["remove", "exclude"], function () {
     for (var c in this.elements) {
@@ -1098,7 +1128,7 @@ SJL.extend(["remove", "exclude"], function () {
  * @returns {any} - return the css value or a list of css values (if SJL instance is working with more than 
  * one element). If the property was not found, the SJL will return _defaultValue_.
  */
-SJL.extend("getCssProperty", function(propertyName, _defaultValue_){
+SJL.extend("getComputedCssProperty", function(propertyName, _defaultValue_){
     _defaultValue_ = _defaultValue_ || null;
     var result = [];
     for (var c in this.elements)
@@ -1109,9 +1139,10 @@ SJL.extend("getCssProperty", function(propertyName, _defaultValue_){
         result.push(value);
     }
 
+    console.log(result.length);
     if (result.length == 1)
         return result[0];
-    else if (result.lengh > 1)
+    else if (result.length > 1)
         return result;
     else 
         return _defaultValue_;
