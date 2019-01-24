@@ -878,6 +878,9 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         appSPointer.elements[0].SJL_CurrAPP = appInstance;
         appInstance.controlledElement = appSPointer.elements[0];
 
+		eval ("appSPointer."+appName+"=appInstance");
+		eval ("appSPointer."+camelizedAppName+"=appInstance");
+		
         //create refeerences to appIntance in all subElements 
         appSPointer.$("*").do((currEl) => {
             eval ("currEl."+appName+"=appInstance");
@@ -901,6 +904,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         //create a reference to appSPointer in appInstance (create a new SJL, ignoring the use of pool, i.e., creating a permanent instance)
         var fixAppSPointer = $(appSPointer.elements, true);
         if (!appInstance.rootS){
+			appInstance.SRoot = fixAppSPointer;
             appInstance.rootS = fixAppSPointer;
             appInstance.containerSElement = fixAppSPointer;
             appInstance.bodyS = fixAppSPointer;
