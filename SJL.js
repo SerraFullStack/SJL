@@ -986,14 +986,6 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         //It now takes all the attributes of the container element and creates properties with the same names and values in the new object 
         //(appIntance). Also check if there is a set method on the object, if it exists, call it with, sending the value by parameter
         //{
-            if (typeof(SJL.mutObserver) == 'undefined')
-            {
-                SJL.mutObserver = new MutationObserver(function(mutData){
-                    
-                    SJL.__AttributeChanged.call(window, mutData[0].target, mutData[0].attributeName, mutData[0].target.getAttribute(mutData[0].attributeName));
-                });
-            }
-
             
 
             SJL.__AttributeChanged = function(element, attribute, newValue){
@@ -1011,12 +1003,21 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 
 
             appSPointer.do((curr) =>{
-                SJL.mutObserver.observe(curr, { attributes: true });
                 var attributes = curr.getAttributeNames();
                 attributes.forEach((currAttribute) =>{
                     var value = curr.getAttribute(currAttribute);
 
-                    SJL.__AttributeChanged.call(window, curr, currAttribute, value);
+                    //Uses SJLWatch intead of MutationObserver because MutationObserver not work when a lot of elements is changed at same time
+
+                    new SJL.Watch((args) => { 
+                            return args._curr.getAttribute(args._attribute);
+                        }, (nVal, oldVal, args) =>{
+                            console.log("nVal: ", nVal);
+                            SJL.__AttributeChanged(args._curr, args._attribute, nVal);
+                        }, window, {_curr: curr, _attribute: currAttribute}, true, true
+                    );
+
+                    //SJL.__AttributeChanged.call(window, curr, currAttribute, value);
                 });
             });
         //}
@@ -1314,7 +1315,7 @@ SJL.cache = new (function(){
  * @param {object} _context_ - A context to execute 'func' and 'varName_Or_GetValueFun' (when a function is passed to this argument). This parameter is optional and default value is null (system will use 'window' object as context)
  * @param {boolean} _logErrors_ - If true, errors during functions executions will be logged in the console. This parameter is optional and default value is "true"
  */
-SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _logErrors_, _stopOnError_){
+SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _arguments_, _logErrors_, _stopOnError_){
     
     //check if the watches system was alrady started. If not, star this
     if (!SJL._watches)
@@ -1343,14 +1344,14 @@ SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _logErrors_, _sto
                         if (exists){
                             //get the current value of the variable or return of function
                             if (typeof(element.variableOrFunc) == 'function')
-                                currVal = element.variableOrFunc.call(element.context);
+                                currVal = element.variableOrFunc.call(element.context, element._arguments_);
                             else
                                 eval ("currVal = "+element.variableOrFunc);
-                            
+
                             //checks if the value was changed
                             if (currVal != element.lastValue){
                                 //call de observation function
-                                element.func.call(element.context, currVal, element.lastValue);
+                                element.func.call(element.context, currVal, element.lastValue, element._arguments_);
 
                                 //update the lastValue (to look for new changes)
                                 element.lastValue = currVal;
@@ -1377,13 +1378,13 @@ SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _logErrors_, _sto
     this.indexes = [];
 
 
-    this.watch = function(varName_Or_GetValueFunc, func, _context_, _logErrors_, _stopOnError_){
+    this.watch = function (varName_Or_GetValueFunc, func, _context_, _arguments_, _logErrors_, _stopOnError_){
         if(typeof(_stopOnError_) == 'undefined')
             _stopOnError_ = true;
         _logErrors_ = typeof(_logErrors_) == 'undefined'? true : _logErrors_;
 
         this.indexes.push(SJL._watches.length);
-        SJL._watches.push({variableOrFunc: varName_Or_GetValueFunc, func: func,  logErrors: _logErrors_, stopOnError: _stopOnError_,lastValue: "---invalid---value---sjl---interval---value", context: _context_ || window});
+        SJL._watches.push({ variableOrFunc: varName_Or_GetValueFunc, func: func, logErrors: _logErrors_, stopOnError: _stopOnError_, lastValue: "---invalid---value---sjl---interval---value", context: _context_ || window, _arguments_: _arguments_ || null});
     };
 
     this.stop = function(){
@@ -1393,7 +1394,7 @@ SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _logErrors_, _sto
     };
 
     if ((varName_Or_GetValueFunc) && (func))
-        this.watch(varName_Or_GetValueFunc, func, _context_, _logErrors_, _stopOnError_);
+        this.watch(varName_Or_GetValueFunc, func, _context_, _arguments_, _logErrors_, _stopOnError_);
 };
 
 
