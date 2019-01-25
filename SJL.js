@@ -864,10 +864,15 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
     var elementsBackup = this.elements;
     var appSPointer = this;
 
-    //convert innerHTML to an attribute, to be sented to appInstance
-    appSPointer.do((curr) => {
-        curr.setAttribute("content", curr.innerHTML);
-    });
+    //If there is any content in the innerHTML of the container element, this content will be sent to an attribute called "content". 
+    //Below, the "content" property will be created (or set if it already exists) in the new object (appInstance) and, if it exists,
+    //the setContent method of this same object will be executed with this innerHTML as a paramete....
+    //{
+        //convert innerHTML to an attribute, to be sented to appInstance
+        appSPointer.do((curr) => {
+            curr.setAttribute("content", curr.innerHTML);
+        });
+    //}
 
 	this.loadHtml(appName + ".html", function () {
         var appInstance = null;
@@ -876,61 +881,91 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         //create a reference to appSPointer in appInstance (create a new SJL, ignoring the use of pool, i.e., creating a permanent instance)
         var fixAppSPointer = $(appSPointer.elements, true);
 
-
+        //if this method has called with '/' at end of appName, remove them
         if (appName.indexOf("/") > 0) {
             appName = appName.split('/');
             appName = appName[appName.length - 1];
         }
 
+        //create a new instance of component javascript class
         eval('if (typeof(' + appName + ') != "undefined"){ appInstance = new ' + appName +'(fixAppSPointer, appArgumentsArray);}else{console.log("SJL could not locate the class \'"+appName+"\'");}');
         
-        appSPointer.elements[0].SJL_CurrAPP = appInstance;
+        //create a pointer to appIntance in the appIntance as SJL_currApp. This will be used at possible next object load to destroy the instance (look at start of this function)
+        appSPointer.setProperty("SJL_CurrAPP", appInstance);
         appInstance.controlledElement = appSPointer.elements[0];
         
-        var camelizedAppName = appName[0].toLowerCase() + (appName.length > 1 ? appName.substring(1) : "");
+        //to facilitate the development, create some more references to the new instance of the component (one of which is with the class name in camelCase)
+        //{
+            var camelizedAppName = appName[0].toLowerCase() + (appName.length > 1 ? appName.substring(1) : ""); 
 
-		eval ("appSPointer.setProperty('"+appName+"', appInstance)");
-        eval("appSPointer.setProperty('" + appName + "Instance', appInstance)");
-		eval ("appSPointer.setProperty('"+camelizedAppName+"', appInstance)");
+            //create references in the container element
+		    appSPointer.setProperty(appName, appInstance);
+            appSPointer.setProperty(appName + "Instance", appInstance);
+		    appSPointer.setProperty(camelizedAppName, appInstance);
+            appSPointer.setProperty('javascript', appInstance);
 		
-        //create refeerences to appIntance in all subElements 
-        appSPointer.$("*").do((currEl) => {
-            eval ("currEl."+appName+"=appInstance");
-            eval ("currEl."+appName+"Instance=appInstance");
-
-            //create a camelized name
+            //Now, it creates some references to the new instance of the component in child elements. This will allow events (such as onclick, onouseover, 
+            //ontouchstart, ...) to be easily accessed by HTML (eg: <div onclick = "componentCamelCaseName.Method)
+            appSPointer.$("*").do((currEl) => {
+                eval ("currEl."+appName+"=appInstance");
+                eval ("currEl."+appName+"Instance=appInstance");
+                //create a camelized name
+                eval ("currEl."+camelizedAppName+"=appInstance");
             
-            eval ("currEl."+camelizedAppName+"=appInstance");
-            
-            if (!currEl.app){
-                //don't set appInstance property, because it is used by SJL to destroy activities. If you use appInstance here and try to load a component inside the elements of appSPointer, the curren appInstance will be destroyed (the desctructor function will be called);
-                currEl.ctrl = appInstance;
-                currEl.app = appInstance;
-            }
-        });
-        
-        
-        if (!appInstance.rootS){
-			appInstance.sRoot = fixAppSPointer;
-            appInstance.rootS = fixAppSPointer;
-            appInstance.html = fixAppSPointer;
-            appInstance.body = fixAppSPointer;
-            appInstance.containerSElement = fixAppSPointer;
-            eval("appInstance." + camelizedAppName +"=fixAppSPointer")
-
-        }
-
-        //process attributes of container element, and for each attribute, add this to new appInstance as a property
-        appSPointer.do((curr) =>{
-            var attributes = curr.getAttributeNames();
-            curr.setAttribute("htmlContent", curr.innerHTML);
-            attributes.forEach((currAttribute) =>{
-                var value = curr.getAttribute(currAttribute);
-                var setName = "set"+currAttribute[0].toUpperCase() + (currAttribute.length > 1 ? currAttribute.substring(1) : "");
-
-                eval("if (typeof(appInstance." + setName + ") != 'undefined'){ appInstance." + setName + ".call(appInstance, value); }appInstance." + currAttribute+" = value;");
+                if (!currEl.app){
+                    //don't set appInstance property, because it is used by SJL to destroy activities. If you use appInstance here and try to load a component inside the elements of appSPointer, the curren appInstance will be destroyed (the desctructor function will be called);
+                    currEl.ctrl = appInstance;
+                    currEl.app = appInstance;
+                }
             });
-        });
+        //}
+        
+        //Just as references to the new object were created in the HTML elements, references to the container element in the new object are created below.
+        //{
+            if (!appInstance.rootS){
+    			appInstance.sRoot = fixAppSPointer;
+                appInstance.rootS = fixAppSPointer;
+                appInstance.html = fixAppSPointer;
+                appInstance.body = fixAppSPointer;
+                appInstance.containerSElement = fixAppSPointer;
+                eval("appInstance." + camelizedAppName +"=fixAppSPointer")
+
+            }
+        //}
+
+        
+        //It now takes all the attributes of the container element and creates properties with the same names and values in the new object 
+        //(appIntance). Also check if there is a set method on the object, if it exists, call it with, sending the value by parameter
+        //{
+            appSPointer.do((curr) =>{
+                var attributes = curr.getAttributeNames();
+                curr.setAttribute("htmlContent", curr.innerHTML);
+                attributes.forEach((currAttribute) =>{
+                    var value = curr.getAttribute(currAttribute);
+                    var setName = "set"+currAttribute[0].toUpperCase() + (currAttribute.length > 1 ? currAttribute.substring(1) : "");
+
+                    eval("if (typeof(appInstance." + setName + ") != 'undefined'){ appInstance." + setName + ".call(appInstance, value); }appInstance." + currAttribute+" = value;");
+                });
+            });
+        //}
+
+        //Now, to help further the development, in the container element (only in the container element) are created methods with the same 
+        //names of the methods of the new object. This way it is easy to call methods of the new object, just take the container element 
+        //and call the methodo with the same name. These methods will redirect execution into the new object.
+        //{
+            var methods = Object.getOwnPropertyNames(appInstance).filter(function (p) {
+                return typeof appInstance[p] === 'function';
+            });
+
+            console.log(methods);
+
+            fixAppSPointer.appInstance = appInstance;
+            methods.forEach((currMethod) => {
+                eval ('appSPointer.setProperty("'+currMethod+'", function(...args){'+
+                    'this.' + camelizedAppName + '.' + currMethod + '.call(this.' + camelizedAppName+', args);'+
+                '})');
+            })
+        //}
 
 
         //try call new instance initilizers
