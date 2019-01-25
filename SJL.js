@@ -637,7 +637,27 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
         var waitings = 0;
         var _this = this;
         allElements.do(function(currElement){
-            var componentName = currElement.getAttribute("SJLLoad");
+            var componentName = null;
+
+            //checks if the tag name starts with sjl
+                //try extract component name from tagname
+                var name = currElement.localName.replace(/\-/g, "/");
+                var name = currElement.localName.replace(/\./g, "/");
+
+                
+            
+                if (name.indexOf('/') > -1)
+                {
+                    if (name != "")
+                        componentName = name;
+                }
+
+
+            if (componentName == null)
+                componentName = currElement.getAttribute("SJLLoad");
+
+            console.log(componentName);
+
             if (componentName != null)
             {
                 //SJL_CurrAPP
@@ -732,7 +752,6 @@ SJL.extend("loadHtmlText", function (htmlText, onLoad, _clearHtml, _context_, _o
         var scripts = $(temp).$("script").do(function (currEl) {
             if (!_discardCssAndJs_)
                 eval(currEl.innerHTML);
-
             currEl.parentNode.removeChild(currEl); 
         });
 
@@ -870,7 +889,8 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
     //{
         //convert innerHTML to an attribute, to be sented to appInstance
         appSPointer.do((curr) => {
-            curr.setAttribute("content", curr.innerHTML);
+            if (curr.innerHTML.trim().length > 0)
+                curr.setAttribute("content", curr.innerHTML);
         });
     //}
 
@@ -933,39 +953,75 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
             }
         //}
 
-        
-        //It now takes all the attributes of the container element and creates properties with the same names and values in the new object 
-        //(appIntance). Also check if there is a set method on the object, if it exists, call it with, sending the value by parameter
-        //{
-            appSPointer.do((curr) =>{
-                var attributes = curr.getAttributeNames();
-                curr.setAttribute("htmlContent", curr.innerHTML);
-                attributes.forEach((currAttribute) =>{
-                    var value = curr.getAttribute(currAttribute);
-                    var setName = "set"+currAttribute[0].toUpperCase() + (currAttribute.length > 1 ? currAttribute.substring(1) : "");
-
-                    eval("if (typeof(appInstance." + setName + ") != 'undefined'){ appInstance." + setName + ".call(appInstance, value); }appInstance." + currAttribute+" = value;");
-                });
-            });
-        //}
-
         //Now, to help further the development, in the container element (only in the container element) are created methods with the same 
         //names of the methods of the new object. This way it is easy to call methods of the new object, just take the container element 
         //and call the methodo with the same name. These methods will redirect execution into the new object.
         //{
-            var methods = Object.getOwnPropertyNames(appInstance).filter(function (p) {
+            //get methods defineds in the contructor
+            var appInstanceMethods = Object.getOwnPropertyNames(appInstance).filter(function (p) {
                 return typeof appInstance[p] === 'function';
             });
 
-            console.log(methods);
+            //get methods  defineds with  prototype
+            Object.getOwnPropertyNames(Object.getPrototypeOf(appInstance)).filter(function (p) {
+                return typeof appInstance[p] === 'function';
+            }).forEach((curr) =>{
+                appInstanceMethods.push(curr);
+            });
+
+        
 
             fixAppSPointer.appInstance = appInstance;
-            methods.forEach((currMethod) => {
+            appInstanceMethods.forEach((currMethod) => {
                 eval ('appSPointer.setProperty("'+currMethod+'", function(...args){'+
                     'this.' + camelizedAppName + '.' + currMethod + '.call(this.' + camelizedAppName+', args);'+
                 '})');
             })
+
+            appSPointer.setProperty("appInstanceMethods", appInstanceMethods);
         //}
+
+
+        
+        //It now takes all the attributes of the container element and creates properties with the same names and values in the new object 
+        //(appIntance). Also check if there is a set method on the object, if it exists, call it with, sending the value by parameter
+        //{
+            if (typeof(SJL.mutObserver) == 'undefined')
+            {
+                SJL.mutObserver = new MutationObserver(function(mutData){
+                    
+                    SJL.__AttributeChanged.call(window, mutData[0].target, mutData[0].attributeName, mutData[0].target.getAttribute(mutData[0].attributeName));
+                });
+            }
+
+            
+
+            SJL.__AttributeChanged = function(element, attribute, newValue){
+                var appInstancesMethods = element.appInstanceMethods;
+                var destinationInstance = element.SJL_CurrAPP;
+
+                eval("destinationInstance."+attribute +" = newValue");
+
+                var setName = "set" + attribute[0].toUpperCase() + (attribute.length > 1 ? attribute.substring(1) : "");
+                appInstancesMethods.forEach((currMethod) => {
+                    if (currMethod.toLowerCase() == setName.toLowerCase())
+                        destinationInstance[currMethod].call(destinationInstance, newValue);
+                });
+            }
+
+
+            appSPointer.do((curr) =>{
+                SJL.mutObserver.observe(curr, { attributes: true });
+                var attributes = curr.getAttributeNames();
+                attributes.forEach((currAttribute) =>{
+                    var value = curr.getAttribute(currAttribute);
+
+                    SJL.__AttributeChanged.call(window, curr, currAttribute, value);
+                });
+            });
+        //}
+
+        
 
 
         //try call new instance initilizers
