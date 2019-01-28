@@ -708,8 +708,10 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
     }
 });
 
-SJL.extend("loadHtmlText", function (htmlText, onLoad, _clearHtml, _context_, _onLoadArguments_, _discardCssAndJs_)
+SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHtml, _context_, _onLoadArguments_, _discardCssAndJs_)
 {
+    onLoad = onLoad || null;
+
     if ((typeof(_clearHtml_) == 'undefined') || (_clearHtml_ == true))
     {
         this.setProperty("innerHTML", "");
@@ -720,6 +722,7 @@ SJL.extend("loadHtmlText", function (htmlText, onLoad, _clearHtml, _context_, _o
     this.do(function(c){
         var nHtml = htmlText;
 
+    try{
         if ((nHtml.indexOf("__rnd__") > -1) || ((nHtml.indexOf("__uid__") > -1)))
         {
             if (!SJL.hasOwnProperty("UniqueIdCount"))
@@ -743,7 +746,7 @@ SJL.extend("loadHtmlText", function (htmlText, onLoad, _clearHtml, _context_, _o
         //try put any header in heaer
         var temp = document.createElement("div");
         temp.innerHTML = nHtml;
-
+    } catch(e){console.log("SJL LoadHtmlText(",nHtml,") Exception: ", e);}
         
     
 
@@ -771,7 +774,8 @@ SJL.extend("loadHtmlText", function (htmlText, onLoad, _clearHtml, _context_, _o
             processeds++;
             if (processeds == this.elements.length)
             {
-                onLoad.call(_context_ || this, htmlText, this, _onLoadArguments_);
+                if (onLoad != null)
+                    onLoad.call(_context_ || this, htmlText, this, _onLoadArguments_);
 
                 if (c.getAttribute("onload") != null)
                 {
