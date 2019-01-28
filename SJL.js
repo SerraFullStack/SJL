@@ -656,8 +656,6 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
             if (componentName == null)
                 componentName = currElement.getAttribute("SJLLoad");
 
-            console.log(componentName);
-
             if (componentName != null)
             {
                 //SJL_CurrAPP
@@ -1012,9 +1010,8 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                     new SJL.Watch((args) => { 
                             return args._curr.getAttribute(args._attribute);
                         }, (nVal, oldVal, args) =>{
-                            console.log("nVal: ", nVal);
                             SJL.__AttributeChanged(args._curr, args._attribute, nVal);
-                        }, window, {_curr: curr, _attribute: currAttribute}, true, true
+                        }, window, {_curr: curr, _attribute: currAttribute}
                     );
 
                     //SJL.__AttributeChanged.call(window, curr, currAttribute, value);
@@ -1148,9 +1145,19 @@ SJL.extend(["unLoadApp", "unLoadActivity"], function (appName, onLoad, appArgume
  * @param {string} name - the name of property
  * @param {any} value - the property value
  */
-SJL.extend("setProperty", function (name, value) {
+SJL.extend("setProperty", function (name, value, _try_set_attribute_) {
+    _try_set_attribute_ = _try_set_attribute_ || "defValue";
+    if (_try_set_attribute_ == "defValue")
+        _try_set_attribute_ = true;
+
     for (var c in this.elements)
+    {
+        if (_try_set_attribute_ == true)
+        if (this.elements[c].getAttribute(name) != null)
+            this.elements[c].setAttribute(name, value);
+            
         eval("this.elements[c]." + name + " = value;");
+    }
 
     return this;
 });
@@ -1231,7 +1238,6 @@ SJL.extend("getComputedCssProperty", function(propertyName, _defaultValue_){
         result.push(value);
     }
 
-    console.log(result.length);
     if (result.length == 1)
         return result[0];
     else if (result.length > 1)
@@ -1372,7 +1378,7 @@ SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _arguments_, _log
                     }
                 }
             });
-        }, 10);
+        }, 25);
     }
 
     this.indexes = [];
