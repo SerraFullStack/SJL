@@ -630,7 +630,8 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
 
     if (allElements.elements.length == 0)
     {
-        onDone.call(this);
+        if (onDone)
+            onDone.call(this);
     }
     else
     {
@@ -815,18 +816,25 @@ SJL.extend(["preloadHtml", "preload"], function (htmlFileName, onDone, _context_
         htmlFileName = [htmlFileName];
 
     var loading = 0;
-    for (var c = 0; c < htmlFileName.length; c++) {
+    for (var c = 0; c < htmlFileName.length; c++) 
+    {
+    
         loading++;
         if ((htmlFileName[c].indexOf(".htm") == -1) && htmlFileName[c].indexOf(".js") == -1 && htmlFileName[c].indexOf(".css") == -1)
+        {
             htmlFileName[c] += ".html";
+        }
         
-        //load the html file
-        this.cacheOrGet(htmlFileName[c], function (result, contAtt, xhr) {
+        //load the html file    
+        this.cacheOrGet(htmlFileName[c], function (result, contAtt, xhr) 
+        {
             SJL._loadedComponents.push({ htmlName: htmlFileName[contAtt], htmlContent: result, alreadyLoaded: false });
             loading--;
 
             if ((loading == 0) && (onDone))
+            {
                 onDone.call(_context_ || this);
+            }
 
         }, this, c, _progressCallback_);
     }
@@ -1419,6 +1427,7 @@ SJL.start = function(_conf_){
     _conf_ = _conf_ || SJL.SJLStartConf;
 
     if (typeof(_conf_.autoLoadComponents) == 'undefined' || _conf_.autoLoadComponents == true)
+        SJL.autoLoadComponents(document.body);
         SJL.autoLoadComponents(document.body);
 
     if (_conf_.useInstancesPool || false)
