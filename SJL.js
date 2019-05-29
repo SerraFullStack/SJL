@@ -309,9 +309,12 @@ SJL.extend("getValue", function () {
 @param {Function} endCallback - The callback to be executed when the animation is done
 @param {object} _pointers_ - The optional params to be passed to callback and endCallback
 */
-SJL.extend(["animate", "ani"],  function (from, to, milisseconds, callback, endCallback, _pointers_, __data__) {
+_SJL._minAnimationFrameTime = 5;
+SJL.extend(["animate", "ani"],  function (from, to, milisseconds, callback, endCallback, _pointers_, _minFrameTime_, __data__) {
     //ons first run (__data__ is private like), create a object for __data__ with the all data necessary to make the
     //animation.
+	
+	
     __data__ = __data__ ||  {
         from: from,
         to: to,
@@ -322,7 +325,8 @@ SJL.extend(["animate", "ani"],  function (from, to, milisseconds, callback, endC
         aborted: false,
         abort: function () { this.aborted = true; },
         endCallback: endCallback || null,
-        pointers: _pointers_
+        pointers: _pointers_,
+		minFrameTime: _minFrameTime_ || _SJL._minAnimationFrameTime
     };
 
 
@@ -353,8 +357,8 @@ SJL.extend(["animate", "ani"],  function (from, to, milisseconds, callback, endC
     //checks if the animatin is aborted. In case of "false", continue animating
     if ((currTime < __data__.time) && (!__data__.aborted)) {
         setTimeout(function (__this, __data) {
-            __this.animate(null, null, null, null, null, null, __data);
-        }, 1, this, __data__);
+            __this.animate(null, null, null, null, null, null, null, __data);
+        }, __data__.minFrameTime, this, __data__);
     }
 
     return this;
@@ -369,7 +373,7 @@ SJL.extend(["animate", "ani"],  function (from, to, milisseconds, callback, endC
 @param {Function} endCallback - The callback to be executed when the animation is done
 @param {object} _pointers_ - The optional params to be passed to callback and endCallback
 */
-SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callback, endCallback, _pointers_) {
+SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callback, endCallback, _pointers_, _minFrameTime_) {
 
 
     var valMax = to - from;
@@ -411,7 +415,7 @@ SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callba
     }, function(){
         callback.call(this, to, _pointers_);
         endCallback.call(this);
-    }, _pointers_);
+    }, _pointers_, _minFrameTime_);
 
     return this;
 });
@@ -666,7 +670,7 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                 
                 if ((active != "none") && (active != "") && (active != "false"))
                 {
-                    console.log("active instance");
+                    //active instance
                     $(currElement).loadActiveComponent(componentName, function(newInstance){
                         waitings++;
 
@@ -1013,7 +1017,8 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 
 
             appSPointer.do((curr) =>{
-                var attributes = curr.getAttributeNames();
+				//older navigators (chrome < 61 and firefox < 45) dont have the getAttributeNames javascript method
+                /*var attributes = curr.getAttributeNames();
                 attributes.forEach((currAttribute) =>{
                     var value = curr.getAttribute(currAttribute);
 
@@ -1027,7 +1032,24 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                     );
 
                     //SJL.__AttributeChanged.call(window, curr, currAttribute, value);
-                });
+                });*/
+				
+				var attributes = curr.attributes;
+				for (var cAttribute = 0; cAttribute < attributes.length; cAttribute++)
+				{
+					var currAttribute = attributes[cAttribute];
+					
+                    //Uses SJLWatch intead of MutationObserver because MutationObserver not work when a lot of elements is changed at same time
+
+                    new SJL.Watch((args) => { 
+                            return args._curr.attributes[args._attributeName].value;
+                        }, (nVal, oldVal, args) =>{
+                            SJL.__AttributeChanged(args._curr, args._attributeName, nVal);
+                        }, window, {_curr: curr, _attributeName: currAttribute.name}
+                    );
+
+                    //SJL.__AttributeChanged.call(window, curr, currAttribute, value);
+                };
             });
         //}
 
