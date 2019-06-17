@@ -1087,7 +1087,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                 var setName = "set" + attribute[0].toUpperCase() + (attribute.length > 1 ? attribute.substring(1) : "");
                 appInstancesMethods.forEach((currMethod) => {
                     if (currMethod.toLowerCase() == setName.toLowerCase())
-                        destinationInstance[currMethod].call(destinationInstance, newValue);
+                        destinationInstance[currMethod].call(destinationInstance, newValue, destinationInstance);
                 });
             }
 
