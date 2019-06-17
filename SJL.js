@@ -373,7 +373,7 @@ SJL.extend(["animate", "ani"],  function (from, to, milisseconds, callback, endC
 @param {Function} endCallback - The callback to be executed when the animation is done
 @param {object} _pointers_ - The optional params to be passed to callback and endCallback
 */
-SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callback, endCallback, _pointers_, _minFrameTime_) {
+SJL.extend(["downSpeedAnimate", "downAni"], function (from, to, milisseconds, callback, endCallback, _pointers_, _minFrameTime_) {
 
 
     var valMax = to - from;
@@ -390,8 +390,68 @@ SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callba
         //calcula o valor atual
 
         calculatedVal = multFactor * valMax;
+		
         //aplica o offset
         calculatedVal += from;
+		
+		
+
+
+        if (to > from) {
+            if (calculatedVal < from)
+                calculatedVal = from;
+            else if (calculatedVal > to)
+                calculatedVal = to;
+        }
+        else {
+            if (calculatedVal < to)
+                calculatedVal = to;
+            else if (calculatedVal > from)
+                calculatedVal = from;
+        }
+
+        //chama a função passada por parametro
+        if (currVal != 15)
+            callback.call(this, calculatedVal, _pointers_);
+        //else
+        //    callback.call(this, to, _pointers_);
+    }, function(){
+        callback.call(this, to, _pointers_);
+        endCallback.call(this);
+    }, _pointers_, _minFrameTime_);
+
+    return this;
+});
+
+/** Function to create animations with speeddown Math function. A callback is executed with current value beetween from and to, in function of time
+@param {double} from - The start value
+@param {double} to - The end value
+@param {int} milisseconds - The time of the animations (in milisseconds)
+@param {Function} callback - The callback to be executed with current value
+@param {Function} endCallback - The callback to be executed when the animation is done
+@param {object} _pointers_ - The optional params to be passed to callback and endCallback
+*/
+SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callback, endCallback, _pointers_, _minFrameTime_) {
+
+
+    var valMax = to - from;
+    var fatorMult = 0;
+    var calculatedVal = 0;
+
+    this.animate(0, 20, milisseconds, function (currVal) {
+        //var multFactor = (Math.pow(1.171, currVal) - 1) / 100;
+        var multFactor = (Math.pow(currVal/10, 8) + 0.01);
+
+
+        if (multFactor > 1)
+            multFactor = 1;
+        //calcula o valor atual
+
+        calculatedVal = multFactor * valMax;
+		
+        //aplica o offset
+        calculatedVal += from;
+		
 
 
         if (to > from) {
@@ -936,13 +996,29 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 		    appSPointer.setProperty(appName, appInstance);
             appSPointer.setProperty(appName + "Instance", appInstance);
 		    appSPointer.setProperty(camelizedAppName, appInstance);
-            appSPointer.setProperty('javascript', appInstance);
+			
+			
+			//create pointer too in a property called javascript
+			//{
+				var jsApps = appSPointer.getProperty("javascript");
+				if (jsApps == null)
+					jsApps = {};
+			
+				eval ("jsApps."+appName+" = appName");
+				eval ("jsApps."+appName + "Instance = appName");
+				eval ("jsApps."+camelizedAppName+" = appName");
+			
+				appSPointer.setProperty('javascript', jsApps);
+			//}
 		
             //Now, it creates some references to the new instance of the component in child elements. This will allow events (such as onclick, onouseover, 
             //ontouchstart, ...) to be easily accessed by HTML (eg: <div onclick = "componentCamelCaseName.Method)
             appSPointer.$("*").do((currEl) => {
                 eval ("currEl."+appName+"=appInstance");
                 eval ("currEl."+appName+"Instance=appInstance");
+				
+				//add a reference in the "javascript" property"
+				eval ("if (!currEl.javascript) currEl.javascript ={}; currEl.javascript."+appName+"=appInstance");
                 //create a camelized name
                 eval ("currEl."+camelizedAppName+"=appInstance");
             
@@ -1355,6 +1431,7 @@ SJL.cache = new (function(){
  * @param {object} _context_ - A context to execute 'func' and 'varName_Or_GetValueFun' (when a function is passed to this argument). This parameter is optional and default value is null (system will use 'window' object as context)
  * @param {boolean} _logErrors_ - If true, errors during functions executions will be logged in the console. This parameter is optional and default value is "true"
  */
+_SJL._watchInterval = 25;
 SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _arguments_, _logErrors_, _stopOnError_){
     
     //check if the watches system was alrady started. If not, star this
@@ -1412,7 +1489,7 @@ SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _arguments_, _log
                     }
                 }
             });
-        }, 25);
+        }, _SJL._watchInterval);
     }
 
     this.indexes = [];
@@ -1442,7 +1519,9 @@ SJL.SJLStartConf ={
     useInstancesPool: false,
     maxPoolInstances: 50,
     usePermanentCache: false,
-    autoLoadComponents: true
+    autoLoadComponents: true,
+	watchInterval:_SJL._watchInterval,
+	minAnimationFrameTime:_SJL._minAnimationFrameTime
 };
 
 SJL.start = function(_conf_){
@@ -1457,4 +1536,10 @@ SJL.start = function(_conf_){
 
     if (_conf_.usePermanentCache || false)
         SJL.cache.defaultDestination = SJL.cache.destinations.LOCALSTORAGE;
+	
+	if (_conf_.watchInterval)
+		_SJL._watchInterval = _conf_.watchInterval
+	
+	if (_conf_.minAnimationFrameTime)
+		_SJL._minAnimationFrameTime = _conf_.minAnimationFrameTime;
 };
