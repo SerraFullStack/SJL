@@ -1431,7 +1431,7 @@ SJL.cache = new (function(){
  * @param {object} _context_ - A context to execute 'func' and 'varName_Or_GetValueFun' (when a function is passed to this argument). This parameter is optional and default value is null (system will use 'window' object as context)
  * @param {boolean} _logErrors_ - If true, errors during functions executions will be logged in the console. This parameter is optional and default value is "true"
  */
-_SJL._watchInterval = 25;
+_SJL._watchInterval = 50;
 SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _arguments_, _logErrors_, _stopOnError_){
     
     //check if the watches system was alrady started. If not, star this
@@ -1521,7 +1521,15 @@ SJL.SJLStartConf ={
     usePermanentCache: false,
     autoLoadComponents: true,
 	watchInterval:_SJL._watchInterval,
-	minAnimationFrameTime:_SJL._minAnimationFrameTime
+	minAnimationFrameTime:_SJL._minAnimationFrameTime,
+	urlMonitor:{
+		active: false,
+		activitiesLocation:null,
+		activityNotFoundCallback: function(){},
+		activityFoundCallback: function(){},
+		element: "body"
+	}
+	
 };
 
 SJL.start = function(_conf_){
@@ -1542,4 +1550,14 @@ SJL.start = function(_conf_){
 	
 	if (_conf_.minAnimationFrameTime)
 		_SJL._minAnimationFrameTime = _conf_.minAnimationFrameTime;
+	
+	if ((_conf_.urlMonitor || false) && (_conf_.urlMonitor.active || false)){
+		console.log(_conf_.urlMonitor.element);
+		$(_conf_.urlMonitor.element, true).autoLoadActivityFromUrl(
+			_conf_.urlMonitor.activityNotFoundCallback,
+			_conf_.urlMonitor.activityFoundCallback,
+			true, 
+			_conf_.urlMonitor.activitiesLocation
+		);
+	};
 };
