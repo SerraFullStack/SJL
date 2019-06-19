@@ -55,15 +55,14 @@
                         {
                             if ((typeof(currElement[propname]) != "undefined") && (currElement[propname] != null))
                             {
-                                eval ("this."+propname + " = function(...args){"+
+                                eval ("this."+propname + " = function(){"+
                                     'for (var index3 = 0; index3 < this.elements.length; index3++){'+
                                         'try{'+
                                             //'if ('+globalName + '.elements[index3].hasOwnProperty("'+propname+'")){'+
                                             //    'console.log("Achou um onClick");'+
-                                               globalName + '.elements[index3]["'+propname+'"](...args);'+
+                                               globalName + '.elements[index3]["'+propname+'"](this, arguments);'+
                                             //'}'+
                                         '}catch(e){ console.error(e, index);}'+
-
                                     '}'+
                                 '}');
                             }
@@ -85,13 +84,20 @@
             return ret;
         };
 
+		
+		this.SInstancesBySelector = {};
         //the argument _forceNewInstance_ just do effect if the pool of instances is in use
-        this.S = function (selector, _forceNewInstance_) {
+        this.S = function (selector, disableUpdate) {
+			if (typeof(disableUpdate) == 'undefined')
+				disableUpdate = false;
 
             if (typeof (selector) == 'undefined')
                 return this;//SJL;
+			
+			var originalSelector = selector;
 
             var vector = [];
+
 
             if (selector.constructor !== Array)
                 selector = [selector];
@@ -100,19 +106,35 @@
             for (var c in this.elements)
             {
                 var currEl = this.elements[c];
-                selector.forEach(currSelector => {
+				for (var propIndex in selector)
+				{
+					var currSelector = selector[propIndex];
                     //request the elements from DOM
                     var nodeList = currEl.querySelectorAll(currSelector);
 
                     //scrolls throught the elements and add its to "vector" array
                     for (var c = 0; c < nodeList.length; c++)
                         vector.push(nodeList[c]);
-                });
+                };
             }
+			
+			if (disableUpdate)
+			{
+				return new _SJL(vector);
+			}
 
-            //create a new _SJL with the vector of elements
-            //ret = new _SJL(vector);
-            ret = __getSJLInstance(vector, _forceNewInstance_);
+			if (this.SInstancesBySelector[originalSelector])
+			{
+				this.SInstancesBySelector[originalSelector].elements = vector;
+				return this.SInstancesBySelector[originalSelector];
+			}
+			else
+			{
+				//create a new _SJL with the vector of elements
+				//ret = new _SJL(vector);
+				ret = new _SJL(vector);
+				this.SInstancesBySelector[originalSelector] = ret;
+			}
 
             //return the new _SJL object
             return ret;
@@ -123,77 +145,28 @@
         this._importElementsPoperties();
     };
 
-    /** Returns a new _SJL instance to work with elements catched by css selector argument "selector" 
-     * @param {string} selector - The css selector that will be used to select a list of elements (or unique element) from DOM. These elements are puted in the "elements" property of new _SJL instance
-     */
-
-
-     __SJLPool={
-        use: false,
-        max: 2,
-        currIndex:0,
-        instances:[],
-        _infoTotalUses: 0
-     };
-
-     //allow the limitation of instance os SJL. If used a pool of instances will be used. The application can use 
-     //_forceNewInstance_ to ignore pool and create a permanent instance.
-     //
-     //Pool of instances is disabled by default, bit, in large application, it can reduce memory usage
-     __setSJLInstancesPool = function(usePool, maxIntances, preStartInstances){
-        __SJLPool.use = usePool;
-        __SJLPool.max = maxIntances;
-        __SJLPool.currIndex = 0;
-        if (preStartInstances)
-        {
-            for (var c = 0; c < maxIntances; c++)
-                __SJLPool.instances[c] = new _SJL();
-        }
-     };
-
-    //the argument _forceNewInstance_ just do effect if the pool of instances is in use
-    __getSJLInstance = function(vector, _forceNewInstance_)
+	_SJL.SInstancesBySelector = {};
+    S = function(selector, disableUpdate)
     {
-        if ((!__SJLPool.use) || (_forceNewInstance_ === true))
-        {
-            if ((__SJLPool.use) && (_forceNewInstance_ === true))
-                console.log("new SJL instance has forced");
-            return new _SJL(vector)
-        }
-        else
-        {
-            __SJLPool._infoTotalUses++;
-            
-            if (__SJLPool.instances.length <= __SJLPool.currIndex)
-                __SJLPool.instances[__SJLPool.currIndex] = new _SJL();
-            
-            var ret = __SJLPool.instances[__SJLPool.currIndex++];
-            if (__SJLPool.currIndex >= __SJLPool.max)
-                __SJLPool.currIndex = 0;
-
-            eval("window.__SJL_"+ret._id + " = null");
-
-            ret.elements = vector;
-            ret._importElementsPoperties();
-            return ret;
-            
-        }
-     };
-
-    //the argument _forceNewInstance_ just do effect if the pool of instances is in use
-    S = function(selector, _forceNewInstance_)
-    {
+		if (typeof(disableUpdate) == 'undefined')
+			disableUpdate = false;
+		
         if (typeof (selector) == 'undefined')
             return SJL;
 
 
         //create a vector to convert nodeList in to an array
         var vector = [];
+		
+		var originalSelector = selector;
         
         if (selector.constructor !== Array)
             selector = [selector];
 
-        selector.forEach(currSelector => {
+        //selector.forEach(currSelector => {
+		for (var propIndex in selector)
+		{
+				var currSelector = selector[propIndex];
             
             
             if (currSelector instanceof Element) {
@@ -208,10 +181,22 @@
                 for (var c = 0; c < nodeList.length; c++)
                     vector.push(nodeList[c]);
             }
-        });
-
-        //create a new _SJL with the vector of elements
-        ret = __getSJLInstance(vector, _forceNewInstance_);
+		}
+        //});
+		
+		if (disableUpdate)
+			return new _SJL(vector);
+			
+		if (_SJL.SInstancesBySelector[originalSelector])
+		{
+			_SJL.SInstancesBySelector[originalSelector].elements = vector;
+			return _SJL.SInstancesBySelector[originalSelector];
+		}
+		else{
+			//create a new _SJL with the vector of elements
+			ret = new _SJL(vector);
+			_SJL.SInstancesBySelector[originalSelector] = ret;
+		}
 
 
         //return the new _SJL object
@@ -497,9 +482,13 @@ SJL.extend("request", function (method, url, data, callback, _context_, _callbac
     
     if (_optionalHeaders_)
     {
-        _optionalHeaders_.forEach(element => {
+        //_optionalHeaders_.forEach(element => {
+		for (var prop in _optionalHeaders_)
+		{
+			var element = _optionalHeaders_[prop];
             xhttp.setRequestHeader(element[0], element[1]);
-        });
+		}
+        //});
     }
 
     if (typeof(_progressCallback_) != 'undefined')
@@ -689,7 +678,7 @@ SJL.extend(["include", "loadScript", "script", "require"], function (scriptsSrc,
 /** this method load an additional html. Scripts and Styles are automatically parsed and moved to header*/
 SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, onDone) {
     //scrolls through all subelements and, for elements that have "SJLload"  attribute, try auto load
-    var allElements = $(element).$("*");
+    var allElements = $(element, true).$("*");
     var length = allElements.elements.length;
 
     if (allElements.elements.length == 0)
@@ -731,7 +720,7 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                 if ((active != "none") && (active != "") && (active != "false"))
                 {
                     //active instance
-                    $(currElement).loadActiveComponent(componentName, function(newInstance){
+                    $(currElement, true).loadActiveComponent(componentName, function(newInstance){
                         waitings++;
 
                         //app and SJL_CurrAPP has are same value
@@ -750,7 +739,7 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                 else
                 {
                     console.log("normal component include");
-                    $(currElement).loadComponent(componentName, function(){
+                    $(currElement, true).loadComponent(componentName, function(){
                         waitings++;
                         if (waitings == length)
                         {
@@ -771,6 +760,8 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
         });
         //onDone.call(_this);
     }
+	
+	delete allElements;
 });
 
 SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHtml, _context_, _onLoadArguments_, _discardCssAndJs_)
@@ -817,7 +808,14 @@ SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHt
 
         var scripts = $(temp).$("script").do(function (currEl) {
             if (!_discardCssAndJs_)
-                eval(currEl.innerHTML);
+			{
+				try{
+					eval(currEl.innerHTML);
+				}
+				catch(err){
+					console.error(err);
+				}
+			}
             currEl.parentNode.removeChild(currEl); 
         });
 
@@ -828,6 +826,9 @@ SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHt
             else
                 currEl.parentNode.removeChild(currEl);
         });
+		
+		delete scripts;
+		delete css;
 
         nHtml = temp.innerHTML;
         
@@ -962,7 +963,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
     //the setContent method of this same object will be executed with this innerHTML as a paramete....
     //{
         //convert innerHTML to an attribute, to be sented to appInstance
-        appSPointer.do((curr) => {
+        appSPointer.do(function(curr){ //(curr) => {
             if (curr.innerHTML.trim().length > 0)
                 curr.setAttribute("content", curr.innerHTML);
         });
@@ -986,7 +987,12 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         
         //create a pointer to appIntance in the appIntance as SJL_currApp. This will be used at possible next object load to destroy the instance (look at start of this function)
         appSPointer.setProperty("SJL_CurrAPP", appInstance);
-        appInstance.controlledElement = appSPointer.elements[0];
+		try{
+			appInstance.controlledElement = appSPointer.elements[0];
+		}
+		catch(e){
+			console.error(e);
+		}
         
         //to facilitate the development, create some more references to the new instance of the component (one of which is with the class name in camelCase)
         //{
@@ -1013,7 +1019,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 		
             //Now, it creates some references to the new instance of the component in child elements. This will allow events (such as onclick, onouseover, 
             //ontouchstart, ...) to be easily accessed by HTML (eg: <div onclick = "componentCamelCaseName.Method)
-            appSPointer.$("*").do((currEl) => {
+            appSPointer.$("*").do(function(currEl){ //currEl) => {
                 eval ("currEl."+appName+"=appInstance");
                 eval ("currEl."+appName+"Instance=appInstance");
 				
@@ -1032,7 +1038,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         
         //Just as references to the new object were created in the HTML elements, references to the container element in the new object are created below.
         //{
-            if (!appInstance.rootS){
+            if (appInstance && !appInstance.rootS){
     			appInstance.sRoot = fixAppSPointer;
                 appInstance.rootS = fixAppSPointer;
                 appInstance.html = fixAppSPointer;
@@ -1048,27 +1054,35 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         //and call the methodo with the same name. These methods will redirect execution into the new object.
         //{
             //get methods defineds in the contructor
-            var appInstanceMethods = Object.getOwnPropertyNames(appInstance).filter(function (p) {
-                return typeof appInstance[p] === 'function';
-            });
+			if (appInstance){
+				var appInstanceMethods = Object.getOwnPropertyNames(appInstance).filter(function (p) {
+					return typeof appInstance[p] === 'function';
+				});
 
-            //get methods  defineds with  prototype
-            Object.getOwnPropertyNames(Object.getPrototypeOf(appInstance)).filter(function (p) {
-                return typeof appInstance[p] === 'function';
-            }).forEach((curr) =>{
-                appInstanceMethods.push(curr);
-            });
+				//get methods  defineds with  prototype
+				var filtred = Object.getOwnPropertyNames(Object.getPrototypeOf(appInstance)).filter(function (p) {
+					return typeof appInstance[p] === 'function';
+				});
+				for (var currProp in filtred)
+				{
+					var curr = filtred[currProp];
+					appInstanceMethods.push(curr);
+				};
 
-        
+			
 
-            fixAppSPointer.appInstance = appInstance;
-            appInstanceMethods.forEach((currMethod) => {
-                eval ('appSPointer.setProperty("'+currMethod+'", function(...args){'+
-                    'this.' + camelizedAppName + '.' + currMethod + '.call(this.' + camelizedAppName+', args);'+
-                '})');
-            })
+				fixAppSPointer.appInstance = appInstance;
+				for (var currProp in appInstanceMethods)
+				{
+					var currMethod = appInstanceMethods[currProp];
+					
+					eval ('appSPointer.setProperty("'+currMethod+'", function(){'+
+						'this.' + camelizedAppName + '.' + currMethod + '.call(this.' + camelizedAppName+', arguments);'+
+					'})');
+				}
 
-            appSPointer.setProperty("appInstanceMethods", appInstanceMethods);
+				appSPointer.setProperty("appInstanceMethods", appInstanceMethods);
+			}
         //}
 
 
@@ -1085,14 +1099,16 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                 eval("destinationInstance."+attribute +" = newValue");
 
                 var setName = "set" + attribute[0].toUpperCase() + (attribute.length > 1 ? attribute.substring(1) : "");
-                appInstancesMethods.forEach((currMethod) => {
+				for (var currProp in appInstancesMethods)
+				{
+					var currMethod = appInstancesMethods[currProp];
                     if (currMethod.toLowerCase() == setName.toLowerCase())
                         destinationInstance[currMethod].call(destinationInstance, newValue, element);
-                });
+                };
             }
 
 
-            appSPointer.do((curr) =>{
+            appSPointer.do(function(curr){ //(curr) =>{
 				//older navigators (chrome < 61 and firefox < 45) dont have the getAttributeNames javascript method
                 /*var attributes = curr.getAttributeNames();
                 attributes.forEach((currAttribute) =>{
@@ -1117,9 +1133,9 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 					
                     //Uses SJLWatch intead of MutationObserver because MutationObserver not work when a lot of elements is changed at same time
 
-                    new SJL.Watch((args) => { 
+                    new SJL.Watch(function(args){ //(args) => { 
                             return args._curr.attributes[args._attributeName].value;
-                        }, (nVal, oldVal, args) =>{
+                        }, function(nVal, oldVal, args){ //(nVal, oldVal, args) =>{
                             SJL.__AttributeChanged(args._curr, args._attributeName, nVal);
                         }, window, {_curr: curr, _attributeName: currAttribute.name}
                     );
@@ -1145,7 +1161,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
             if (typeof (appInstance.create) != 'undefined')
                 appInstance.create(appArgumentsArray);
         //}
-
+		delete fixAppSPointer;
 
 
 		onLoad = onLoad || null;
@@ -1173,7 +1189,7 @@ SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoa
 
         if (typeof(_prefixOrFolder_) != 'undefined' )
         {
-            if (_prefixOrFolder_.endsWith ('.'))
+            if (_prefixOrFolder_.lastIndexOf('.') == _prefixOrFolder_.length-1)
                 temp = _prefixOrFolder_ + temp;
             else
                 temp = _prefixOrFolder_ +'.' + temp;
@@ -1441,9 +1457,10 @@ SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _arguments_, _log
         SJL._watches = [];
 
         //create a interval to monitor the variables and call functions
-        setInterval(() =>{
+        setInterval(function(){ //() =>{
             currIndex = -1;
-            SJL._watches.forEach(element => {
+			for (var currI in SJL._watches) {
+				var element = SJL._watches[currI];
                 currIndex++;
                 try{
 
@@ -1488,7 +1505,7 @@ SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _arguments_, _log
                         console.error("SJL Watch internal error: ", SJLError);
                     }
                 }
-            });
+            };
         }, _SJL._watchInterval);
     }
 
@@ -1505,9 +1522,10 @@ SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _arguments_, _log
     };
 
     this.stop = function(){
-        this.indexes.forEach(element => {
+		for (var currI in this.indexes) {
+			var element = this.indexes[currI];
             SJL._watches[element] = null;
-        });
+        };
     };
 
     if ((varName_Or_GetValueFunc) && (func))
@@ -1515,9 +1533,7 @@ SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _arguments_, _log
 };
 
 
-SJL.SJLStartConf ={
-    useInstancesPool: false,
-    maxPoolInstances: 50,
+SJL.SJLStartConf = {
     usePermanentCache: false,
     autoLoadComponents: true,
 	watchInterval:_SJL._watchInterval,
@@ -1539,9 +1555,7 @@ SJL.start = function(_conf_){
         SJL.autoLoadComponents(document.body);
         SJL.autoLoadComponents(document.body);
 
-    if (_conf_.useInstancesPool || false)
-        __setSJLInstancesPool(true, _conf_.maxPoolInstances || 50, false);
-
+    
     if (_conf_.usePermanentCache || false)
         SJL.cache.defaultDestination = SJL.cache.destinations.LOCALSTORAGE;
 	
