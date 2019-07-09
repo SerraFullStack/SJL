@@ -2,6 +2,8 @@
 
     _SJL = function(elementList)
     {
+		
+		//console.log(new Error().stack);
         this.elements = elementList;
         this._id = 0;
 
@@ -105,12 +107,12 @@
         
             for (var c in this.elements)
             {
-                var currEl = this.elements[c];
+                var currEl2 = this.elements[c];
 				for (var propIndex in selector)
 				{
 					var currSelector = selector[propIndex];
                     //request the elements from DOM
-                    var nodeList = currEl.querySelectorAll(currSelector);
+                    var nodeList = currEl2.querySelectorAll(currSelector);
 
                     //scrolls throught the elements and add its to "vector" array
                     for (var c = 0; c < nodeList.length; c++)
@@ -158,15 +160,16 @@
         //create a vector to convert nodeList in to an array
         var vector = [];
 		
-		var originalSelector = selector;
         
+		var originalSelector = selector;
+		
         if (selector.constructor !== Array)
             selector = [selector];
 
         //selector.forEach(currSelector => {
 		for (var propIndex in selector)
 		{
-				var currSelector = selector[propIndex];
+			var currSelector = selector[propIndex];
             
             
             if (currSelector instanceof Element) {
@@ -211,7 +214,31 @@
     SJL = new _SJL();
 //})();
 
-
+SJL.extend(["clearObject", "clear"], function(object, _currStack_size_){
+	object = object || this;
+	_currStack_size_ = _currStack_size_ || 1;
+	
+	if (_currStack_size_ >= 3)
+		return;
+	
+	for (var c in object)
+	{
+		if (object[c] instanceof Object)
+			this.clearObject(object[c], (parseInt(_currStack_size_)+1));
+		
+		if (object[c] instanceof Array)
+		{
+			while (object[c].length > 0)
+				object[c].pop();
+			
+			object[c].length = 0;
+		}
+		
+		//object[c] = null;
+		delete object[c];
+		
+	}
+});
 
 SJL.extend("hide", function(){
     for (var c in this.elements)
@@ -241,7 +268,8 @@ SJL.extend("show", function(){
 });
 
 /** Sets the value or */
-SJL.extend("setValue", function (data) {
+SJL.extend("setValue", function (data, autoLoadComponents_default_false) {
+	autoLoadComponents_default_false = autoLoadComponents_default_false || false;
     for (var c in this.elements)
     {
         var curr = this.elements[c];
@@ -259,7 +287,8 @@ SJL.extend("setValue", function (data) {
             else
                 curr.innerHTML = data;
 
-            this.autoLoadComponents(this.elements[c], function(){});
+			if (autoLoadComponents_default_false)
+				this.autoLoadComponents(this.elements[c], function(){});
         }
     }
 
@@ -504,7 +533,8 @@ SJL.extend("request", function (method, url, data, callback, _context_, _callbac
         if (this.readyState == 4){// && this.status == 200) {
             if (callback != null) {
                 var resp = this.responseText;
-                if (xhttp.getResponseHeader("Content-Type").toLowerCase().indexOf("application/json") > -1)
+				var contentType = xhttp.getResponseHeader("Content-Type");
+                if (contentType && contentType.toLowerCase().indexOf("application/json") > -1)
                     resp = JSON.parse(resp);
 
                 callback.call(_context_ || this, resp, _callbackAditionalArgs_, xhttp, this);
@@ -588,7 +618,7 @@ SJL.extend(["includeUsingTags", "loadScriptUsingTags", "scriptUsingTags", "requi
     for (var c in scriptsSrc)
     {
         var type = "text/javascript";
-        if (scriptsSrc[0].toLowerCase().endsWith(".css"))
+        if (scriptsSrc[c].toLowerCase().indexOf(".css") == scriptsSrc[c].length-4)
             type = "text/css";
 
 
@@ -634,7 +664,7 @@ SJL.extend(["include", "loadScript", "script", "require"], function (scriptsSrc,
     for (var c in scriptsSrc)
     {
         var type = "text/javascript";
-        if (scriptsSrc[c].toLowerCase().endsWith(".css"))
+        if (scriptsSrc[c].toLowerCase().indexOf(".css") == scriptsSrc[c].length-4)
             type = "text/css";
         
         this.cacheOrGet(scriptsSrc[c], function(response){
@@ -657,7 +687,8 @@ SJL.extend(["include", "loadScript", "script", "require"], function (scriptsSrc,
                 //set the onloadFunction
                 
                 //add the new script to DOM. After this, the browser will be load the new script.
-                document.documentElement.appendChild(script);
+                //document.documentElement.appendChild(script);
+				document.head.appendChild(script);
             }
 
             //script.onload = function () {
@@ -678,7 +709,7 @@ SJL.extend(["include", "loadScript", "script", "require"], function (scriptsSrc,
 /** this method load an additional html. Scripts and Styles are automatically parsed and moved to header*/
 SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, onDone) {
     //scrolls through all subelements and, for elements that have "SJLload"  attribute, try auto load
-    var allElements = $(element, true).$("*");
+    var allElements = $(element).$("*", true);
     var length = allElements.elements.length;
 
     if (allElements.elements.length == 0)
@@ -761,6 +792,7 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
         //onDone.call(_this);
     }
 	
+	allElements.clearObject();
 	delete allElements;
 });
 
@@ -778,32 +810,32 @@ SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHt
     this.do(function(c){
         var nHtml = htmlText;
 
-    try{
-        if ((nHtml.indexOf("__rnd__") > -1) || ((nHtml.indexOf("__uid__") > -1)))
-        {
-            if (!SJL.hasOwnProperty("UniqueIdCount"))
-            {
-                SJL.UniqueIdCount = 1;
-            }
+		try{
+			if ((nHtml.indexOf("__rnd__") > -1) || ((nHtml.indexOf("__uid__") > -1)))
+			{
+				if (!SJL.hasOwnProperty("UniqueIdCount"))
+				{
+					SJL.UniqueIdCount = 1;
+				}
 
-            var rep = "uid"+SJL.UniqueIdCount;
-            SJL.UniqueIdCount++;
+				var rep = "uid"+SJL.UniqueIdCount;
+				SJL.UniqueIdCount++;
 
-            nHtml =nHtml.replace(/__rnd__/g, rep).replace(/__uid__/g, rep);
+				nHtml =nHtml.replace(/__rnd__/g, rep).replace(/__uid__/g, rep);
 
-            //if have random data in scripts and css, the system could not ignore a new css and javascript text
-            _discardCssAndJs_ = false; 
-        }
-        //the argument _discardCssAndJs_ can be used to prevend excessive css and javascript loading (when components are loading)
+				//if have random data in scripts and css, the system could not ignore a new css and javascript text
+				_discardCssAndJs_ = false; 
+			}
+			//the argument _discardCssAndJs_ can be used to prevend excessive css and javascript loading (when components are loading)
 
-        if (typeof (_discardCssAndJs_) == 'undefined')
-            _discardCssAndJs_ = false;
+			if (typeof (_discardCssAndJs_) == 'undefined')
+				_discardCssAndJs_ = false;
 
-        //try put any header in heaer
-        var temp = document.createElement("div");
-        temp.innerHTML = nHtml;
-    } catch(e){console.log("SJL LoadHtmlText(",nHtml,") Exception: ", e);}
-        
+			//try put any header in heaer
+			var temp = document.createElement("div");
+			temp.innerHTML = nHtml;
+		} catch(e){console.log("SJL LoadHtmlText(",nHtml,") Exception: ", e);}
+			
     
 
         var scripts = $(temp).$("script").do(function (currEl) {
@@ -1007,8 +1039,10 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 			//create pointer too in a property called javascript
 			//{
 				var jsApps = appSPointer.getProperty("javascript");
-				if (jsApps == null)
+				if (!jsApps)
+				{
 					jsApps = {};
+				}
 			
 				eval ("jsApps."+appName+" = appName");
 				eval ("jsApps."+appName + "Instance = appName");
@@ -1024,15 +1058,18 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                 eval ("currEl."+appName+"Instance=appInstance");
 				
 				//add a reference in the "javascript" property"
-				eval ("if (!currEl.javascript) currEl.javascript ={}; currEl.javascript."+appName+"=appInstance");
+				eval ("if (!currEl.javascript){ currEl.javascript ={}}; currEl.javascript."+appName+"=appInstance");
+				
                 //create a camelized name
                 eval ("currEl."+camelizedAppName+"=appInstance");
+				
             
                 if (!currEl.app){
                     //don't set appInstance property, because it is used by SJL to destroy activities. If you use appInstance here and try to load a component inside the elements of appSPointer, the curren appInstance will be destroyed (the desctructor function will be called);
                     currEl.ctrl = appInstance;
                     currEl.app = appInstance;
                 }
+				
             });
         //}
         
@@ -1566,7 +1603,6 @@ SJL.start = function(_conf_){
 		_SJL._minAnimationFrameTime = _conf_.minAnimationFrameTime;
 	
 	if ((_conf_.urlMonitor || false) && (_conf_.urlMonitor.active || false)){
-		console.log(_conf_.urlMonitor.element);
 		$(_conf_.urlMonitor.element, true).autoLoadActivityFromUrl(
 			_conf_.urlMonitor.activityNotFoundCallback,
 			_conf_.urlMonitor.activityFoundCallback,
