@@ -205,7 +205,7 @@
         //return the new _SJL object
         return ret;
     };
-    /** A pointer to "S" function: Returns a new _SJL instance to work with elements catched by css selector argument "selector" 
+    /** A pointer to "S" function: Returns a new _SJL instance to work with elements caught by css selector argument "selector" 
      * @param {string} selector - The css selector that will be used to select a list of elements (or unique element) from DOM. These elements are puted in the "elements" property of new _SJL instance
      */
     $ = S;
@@ -396,7 +396,7 @@ SJL.extend(["downSpeedAnimate", "downAni"], function (from, to, milisseconds, ca
 
     this.animate(0, 20, milisseconds, function (currVal) {
         //var multFactor = (Math.pow(1.171, currVal) - 1) / 100;
-        var multFactor = (1 - Math.pow(currVal, -1.5) + 0.01);
+        var multFactor = (1 - Math.pow(currVal, -1.5    ) + 0.01);
 
 
         if (multFactor > 1)
@@ -425,13 +425,11 @@ SJL.extend(["downSpeedAnimate", "downAni"], function (from, to, milisseconds, ca
         }
 
         //chama a função passada por parametro
-        if (currVal != 15)
-            callback.call(this, calculatedVal, _pointers_);
-        //else
-        //    callback.call(this, to, _pointers_);
+        callback.call(this, calculatedVal, _pointers_);
     }, function(){
         callback.call(this, to, _pointers_);
-        endCallback.call(this);
+        if (endCallback)
+            endCallback.call(this);
     }, _pointers_, _minFrameTime_);
 
     return this;
@@ -452,9 +450,9 @@ SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callba
     var fatorMult = 0;
     var calculatedVal = 0;
 
-    this.animate(0, 20, milisseconds, function (currVal) {
+    this.animate(1.5, 20, milisseconds, function (currVal) {
         //var multFactor = (Math.pow(1.171, currVal) - 1) / 100;
-        var multFactor = (Math.pow(currVal/10, 8) + 0.01);
+        var multFactor = (Math.pow(currVal/10, 5) + 0.01);
 
 
         if (multFactor > 1)
@@ -465,8 +463,6 @@ SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callba
 		
         //aplica o offset
         calculatedVal += from;
-		
-
 
         if (to > from) {
             if (calculatedVal < from)
@@ -482,13 +478,11 @@ SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callba
         }
 
         //chama a função passada por parametro
-        if (currVal != 15)
-            callback.call(this, calculatedVal, _pointers_);
-        //else
-        //    callback.call(this, to, _pointers_);
+        callback.call(this, calculatedVal, _pointers_);
     }, function(){
         callback.call(this, to, _pointers_);
-        endCallback.call(this);
+        if (endCallback)
+            endCallback.call(this);
     }, _pointers_, _minFrameTime_);
 
     return this;
@@ -769,7 +763,6 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                 }
                 else
                 {
-                    console.log("normal component include");
                     $(currElement, true).loadComponent(componentName, function(){
                         waitings++;
                         if (waitings == length)
@@ -1177,7 +1170,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                         }, window, {_curr: curr, _attributeName: currAttribute.name}
                     );
 
-                    //SJL.__AttributeChanged.call(window, curr, currAttribute, value);
+                    SJL.__AttributeChanged.call(window, curr, currAttribute.name, currAttribute.value);
                 };
             });
         //}
@@ -1209,6 +1202,47 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
     return this;
 });
 
+/* call atributes like "onDoSomething" */
+//callEvent("onChange", {var:value, var2:value})
+SJL.extend(["callEvent", "callEventAttribute"], function(attributeName, keysValuesObject){ 
+    
+    //separe properties names in a csv (to be informed in function with eval) and their values in a vector
+    var argsNames = "";
+    var values = [];
+    for (var name in keysValuesObject)
+    {
+        argsNames = argsNames + name + ","
+        values.push(keysValuesObject[name])
+    }
+
+    //remove the las ',' from argsNames csv
+    if (argsNames.length > 0 && argsNames[argsNames.length-1] == ',')
+        argsNames = argsNames.substr(0, argsNames.length-1);
+
+    //find the attribute name in all elements cotnroled by current SJL instance
+    this.do(function(currEl){
+        for (var cA in currEl.attributes){
+            var currAttrib = currEl.attributes[cA];
+            
+            if (currAttrib.name && currAttrib.name.toLowerCase() == attributeName.toLowerCase())
+            {
+                if (typeof(currAttrib.value) == "function")
+                    currAttrib.value.apply(currEl, values);
+                else
+                    //func a function with arguments names as properties names of 'keysValuesObject' object and 
+                    //and arguments values as 'values' vector
+                    eval(
+                        '(function('+argsNames+'){'+
+                            'try{'+
+                                'eval(currAttrib.value);'+
+                            '}'+
+                            'catch(e){console.error("Error caught in SJL.callEvent: ", e)}'+
+                        '}).apply(currEl, values);'
+                    );
+            }
+        }
+    });
+});
 
 //auto load app specified in the url (http://server/#app/arg1,arg2)
 SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoad, _prefixOrFolder_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
@@ -1220,6 +1254,7 @@ SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoa
         var args = [];
         if (temp.indexOf('/') > 0) {
             args = temp.substr(temp.indexOf('/') + 1, temp.length);
+            args = args.replace(/\//g, ',');
             args = args.split(',');
             temp = temp.substr(0, temp.indexOf('/'));
         }
@@ -1232,6 +1267,7 @@ SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoa
                 temp = _prefixOrFolder_ +'.' + temp;
         }
 
+        //uses '.' to allow organization of activities inside folders
         temp = temp.replace(/\./g, "/");
         //let stateObject = { foo: "bar" };
         //history.pushState(stateObject, "page 2", "newpage.html");
@@ -1244,6 +1280,9 @@ SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoa
     }
 });
 
+
+//the flag bellow can be used to pause url monitor and change the url without SJL change activity
+_SJL.pauseAutoLoadAppFromUrl = false;
 //monitores the url, autoloading apps
 /** When this method is called, the SJL will start to monitor changes in the location.href
  *  and will, automatically, load activities when the url is changed. 
@@ -1259,25 +1298,53 @@ SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoa
  *                                   - inside a folder named 'MyActivities', which is inside of another folder 
  *                                   - named ''MyApp'.
  * */
-SJL.extend(["autoLoadAppFromUrl", "autoLoadActivityFromUrl"], function (onNotLoad, onLoad, _forceFirst_, _prefixOrFolder_, _progressCallback_) {
+SJL.extend(["autoLoadAppFromUrl", "autoLoadActivityFromUrl"], function (onNotLoad, onLoad, _default_, _prefixOrFolder_, _progressCallback_) {
     var __this = this;
 
     /*window.onbeforeunload = function(){
         preventDefault();
     }*/
 
+
     window.addEventListener("hashchange", function (event) {
         //event.preventDefault();
-        __this.loadActivityFromUrl(onNotLoad, onLoad, _prefixOrFolder_, _progressCallback_);
+        if (!_SJL.pauseAutoLoadAppFromUrl)
+            __this.loadActivityFromUrl(onNotLoad, onLoad, _prefixOrFolder_, _progressCallback_);
     });
 
-    _forceFirst_ == _forceFirst_ || null;
-    if (_forceFirst_ == null)
-        _forceFirst_ = true;
 
-    if (_forceFirst_)
-        this.loadActivityFromUrl(onNotLoad, onLoad, _prefixOrFolder_, _progressCallback_);
 
+    _default_ == _default_ || null;
+    if (_default_ != null)
+    {
+        if (window.location.href.indexOf('#') == -1)
+            window.location.href += "#"+_default_;
+        else
+            __this.loadActivityFromUrl(onNotLoad, onLoad, _prefixOrFolder_, _progressCallback_);
+    }
+    else if (window.location.href.indexOf('#') > -1)
+            __this.loadActivityFromUrl(onNotLoad, onLoad, _prefixOrFolder_, _progressCallback_);
+
+});
+
+SJL.extend(["changeUrlHash", "changeUrl"], function (url, allow_activity_autoload_default_true) {
+    if (typeof(allow_activity_autoload_default_true) == 'undefined')
+        allow_activity_autoload_default_true = true;
+
+    if (allow_activity_autoload_default_true != true)
+    {
+        var currPauseState = _SJL.pauseAutoLoadAppFromUrl;
+        console.log("currPauseState", currPauseState);
+        _SJL.pauseAutoLoadAppFromUrl = true;
+    }
+    location.hash = url;
+    
+    if (allow_activity_autoload_default_true != true)
+    {
+        setTimeout(function(){
+            _SJL.pauseAutoLoadAppFromUrl = currPauseState;
+        }, 10);
+    }
 });
 
 //force an app destructor method
@@ -1337,7 +1404,14 @@ SJL.extend("getProperty", function (name, _defaultValue_) {
     _defaultValue_ = _defaultValue_ || null;
     var ret = [];
     for (var c in this.elements) {
-        eval("if (this.elements[c]."+name+"){ret.push(this.elements[c]." + name + ");}");
+        eval("if ("+
+            "this.elements[c]."+name+"){"+
+                "ret.push(this.elements[c]." + name + ");"+
+            "} "+
+            "else if (this.elements[c].attributes['"+name+"']){"+
+                "ret.push(this.elements[c].getAttribute('"+name+"'));"+
+            "}"
+        );
     }
 
     if (ret.length == 1)
@@ -1536,7 +1610,7 @@ SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _arguments_, _log
                             SJL._watches[currIndex] = null;
 
                         if (element.logErrors)
-                            console.error(error);
+                            console.error("Error caught in SJLWatch. Watch params: ", element, ". Error: ", error);
                     }catch(SJLError){
                         SJL._watches[currIndex] = null;
                         console.error("SJL Watch internal error: ", SJLError);
@@ -1582,7 +1656,6 @@ SJL.SJLStartConf = {
 		activityFoundCallback: function(){},
 		element: "body"
 	}
-	
 };
 
 SJL.start = function(_conf_){
