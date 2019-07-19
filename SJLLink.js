@@ -141,7 +141,7 @@ new (function (){
         }
 
         
-        SJL.extend("_linkDomWorkder", this);
+        SJL.extend("_linkDomWorker", this);
         SJL.extend(["linkDom", "bindDom"], function () {
             for (c in this.elements)
             {

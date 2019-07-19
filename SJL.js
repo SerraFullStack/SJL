@@ -450,9 +450,9 @@ SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callba
     var fatorMult = 0;
     var calculatedVal = 0;
 
-    this.animate(1.5, 20, milisseconds, function (currVal) {
+    this.animate(5, 10, milisseconds, function (currVal) {
         //var multFactor = (Math.pow(1.171, currVal) - 1) / 100;
-        var multFactor = (Math.pow(currVal/10, 5) + 0.01);
+        var multFactor = (Math.pow(currVal/10, 10));
 
 
         if (multFactor > 1)
@@ -720,16 +720,20 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
 
             //checks if the tag name starts with sjl
                 //try extract component name from tagname
-                var name = currElement.localName.replace(/\-/g, "/");
-                var name = currElement.localName.replace(/\./g, "/");
+                var name = currElement.outerHTML.substr(0, 128).split('>')[0].split(' ')[0].replace(/\-/g, "/");
+                
+                if (name.toLowerCase().indexOf('sjl') > -1)
+                {
+                    componentName = name.substr(name.toLowerCase().indexOf('sjl')+4);
+                    componentName = componentName.replace(/\./g, "/");
+                    componentName = componentName.replace(/\-/g, "/");
+                    componentName = componentName.replace(/\:/g, "/");
+                globalName = currElement;
+                    console.log("Found sjl component tag: "+componentName);
+                }
 
                 
-            
-                if (name.indexOf('/') > -1)
-                {
-                    if (name != "")
-                        componentName = name;
-                }
+                
 
 
             if (componentName == null)
@@ -983,14 +987,18 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
     var elementsBackup = this.elements;
     var appSPointer = this;
 
-    //If there is any content in the innerHTML of the container element, this content will be sent to an attribute called "content". 
-    //Below, the "content" property will be created (or set if it already exists) in the new object (appInstance) and, if it exists,
-    //the setContent method of this same object will be executed with this innerHTML as a paramete....
+    /*If there is any content in the innerHTML of the container element, this content 
+    will be sent to an attribute called "content". Below, the "content" property will
+    be created (or set if it already exists) in the new object (appInstance) and, if
+    it exists, the setContent method of this same object will be executed with this
+    innerHTML as a paramete....*/
     //{
         //convert innerHTML to an attribute, to be sented to appInstance
         appSPointer.do(function(curr){ //(curr) => {
             if (curr.innerHTML.trim().length > 0)
+            {
                 curr.setAttribute("content", curr.innerHTML);
+            }
         });
     //}
 
@@ -1125,7 +1133,6 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
             SJL.__AttributeChanged = function(element, attribute, newValue){
                 var appInstancesMethods = element.appInstanceMethods;
                 var destinationInstance = element.SJL_CurrAPP;
-
                 eval("destinationInstance."+attribute +" = newValue");
 
                 var setName = "set" + attribute[0].toUpperCase() + (attribute.length > 1 ? attribute.substring(1) : "");
@@ -1138,40 +1145,44 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
             }
 
 
-            appSPointer.do(function(curr){ //(curr) =>{
-				//older navigators (chrome < 61 and firefox < 45) dont have the getAttributeNames javascript method
-                /*var attributes = curr.getAttributeNames();
-                attributes.forEach((currAttribute) =>{
-                    var value = curr.getAttribute(currAttribute);
+            //hooks setAttribute method of elements
+            appSPointer.do(function(curr){
+                
+                if (!curr.__setAttribute)
+                {
+                    curr.__setAttribute = curr.setAttribute;
+                    
+                    
+                    curr.setAttribute = function(name, value){
+                        this.__setAttribute(name, value);
+                        /*  When an  activitiy is loaded (see the beginning of this method), the searches 
+                        looks the root element for any html content. If something is found, SJL move that
+                        content  to an attribute called "content". This attribute is sent to class of the
+                        new activity in a for loop that is implemented bellow (out of current if). 
+                        
+                            But  there  is  one  thing  that  should  be  considered  here  (before  call
+                        __AttributeChanged). __AttributeChanged uses the property 'SJL_CurrAPP', which is
+                        a  reference  to class instance of new activity. When this 'content' attribute is
+                        created  in  the root element (with its HTML content), the 'SJL_CurrAPP' property
+                        (also   of   root   element)   is   not  yet  exists,  raising  an  exception  in
+                        __AttributeChanged   event.  Therefore,  it  is  necessary  to  verify  that  the
+                        'SJL_CurrAPP'  property  already  exists in the 'curr' element before calling SJL
+                        method '__AttributeChanged'.*/
+                        try{
+                            if (this.SJL_CurrAPP)
+                                SJL.__AttributeChanged(this, name, value);
+                        }catch{
+                            console.log("erro ao setar o attributo ", name, " como valor ", value, "do elemento", this);
+                        }
+                    };
+                }
 
-                    //Uses SJLWatch intead of MutationObserver because MutationObserver not work when a lot of elements is changed at same time
-
-                    new SJL.Watch((args) => { 
-                            return args._curr.getAttribute(args._attribute);
-                        }, (nVal, oldVal, args) =>{
-                            SJL.__AttributeChanged(args._curr, args._attribute, nVal);
-                        }, window, {_curr: curr, _attribute: currAttribute}
-                    );
-
-                    //SJL.__AttributeChanged.call(window, curr, currAttribute, value);
-                });*/
-				
-				var attributes = curr.attributes;
-				for (var cAttribute = 0; cAttribute < attributes.length; cAttribute++)
-				{
-					var currAttribute = attributes[cAttribute];
-					
-                    //Uses SJLWatch intead of MutationObserver because MutationObserver not work when a lot of elements is changed at same time
-
-                    new SJL.Watch(function(args){ //(args) => { 
-                            return args._curr.attributes[args._attributeName].value;
-                        }, function(nVal, oldVal, args){ //(nVal, oldVal, args) =>{
-                            SJL.__AttributeChanged(args._curr, args._attributeName, nVal);
-                        }, window, {_curr: curr, _attributeName: currAttribute.name}
-                    );
-
+                var attributes = curr.attributes;
+                for (var cAttribute = 0; cAttribute < attributes.length; cAttribute++)
+                {
+                    var currAttribute = attributes[cAttribute];
                     SJL.__AttributeChanged.call(window, curr, currAttribute.name, currAttribute.value);
-                };
+                }
             });
         //}
 
@@ -1383,10 +1394,31 @@ SJL.extend("setProperty", function (name, value, _try_set_attribute_) {
     for (var c in this.elements)
     {
         if (_try_set_attribute_ == true)
-        if (this.elements[c].getAttribute(name) != null)
-            this.elements[c].setAttribute(name, value);
+        {
+            if (this.elements[c].getAttribute(name) != null)
+            {
+                this.elements[c].setAttribute(name, value);
+            }
+        }
             
         eval("this.elements[c]." + name + " = value;");
+    }
+
+    return this;
+});
+
+SJL.extend("setAttribute", function (name, value, _try_set_property_) {
+    _try_set_property_ = _try_set_property_ || "defValue";
+    if (_try_set_property_ == "defValue")
+    _try_set_property_ = true;
+
+    for (var c in this.elements)
+    {
+        if (_try_set_property_ == true)
+        if (this.elements[c].hasOwnProperty(name))
+            eval("this.elements[c]."+name+" = value;");
+            
+        this.elements[c].setAttribute(name, value);
     }
 
     return this;
