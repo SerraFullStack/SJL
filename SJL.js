@@ -17,6 +17,7 @@
                 names = [names];
             }
 
+            
             for (var index in names)
                 eval("_SJL.prototype." + names[index] + " = value;");
 
@@ -648,7 +649,7 @@ SJL.extend(["includeUsingTags", "loadScriptUsingTags", "scriptUsingTags", "requi
     return this;
 });
 
-SJL.extend(["include", "loadScript", "script", "require"], function (scriptsSrc, onDone, _context_, _progressCallback_) {
+SJL.extend(["include", "loadScript", "script", "require", "import"], function (scriptsSrc, onDone, _context_, _progressCallback_) {
     onDone = onDone || null;
 
     if (scriptsSrc.constructor !== Array)
@@ -701,7 +702,7 @@ SJL.extend(["include", "loadScript", "script", "require"], function (scriptsSrc,
 });
 
 /** this method load an additional html. Scripts and Styles are automatically parsed and moved to header*/
-SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, onDone) {
+SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, onDone, _context_) {
     //scrolls through all subelements and, for elements that have "SJLload"  attribute, try auto load
     var allElements = $(element).$("*", true);
     var length = allElements.elements.length;
@@ -709,7 +710,7 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
     if (allElements.elements.length == 0)
     {
         if (onDone)
-            onDone.call(this);
+            onDone.call(_context_ || this);
     }
     else
     {
@@ -761,7 +762,7 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                         if (waitings == length)
                         {
                             if (onDone)
-                                onDone.call(_this);
+                                onDone.call(_context_ || _this);
                         }
                     });
                 }
@@ -771,7 +772,7 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                         waitings++;
                         if (waitings == length)
                         {
-                            onDone.call(_this);
+                            onDone.call(_context_ || _this);
                         }
                     });
                 }
@@ -833,8 +834,7 @@ SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHt
 			temp.innerHTML = nHtml;
 		} catch(e){console.log("SJL LoadHtmlText(",nHtml,") Exception: ", e);}
 			
-    
-
+        
         var scripts = $(temp).$("script").do(function (currEl) {
             if (!_discardCssAndJs_)
 			{
@@ -844,7 +844,7 @@ SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHt
 				catch(err){
 					console.error(err);
 				}
-			}
+            }   
             currEl.parentNode.removeChild(currEl); 
         });
 
@@ -865,32 +865,48 @@ SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHt
             
         c.innerHTML += nHtml;
 
-        this.autoLoadComponents(c, function(){
+        var _this = this;
+        _this.autoLoadComponents(c, function(){
             processeds++;
-            if (processeds == this.elements.length)
+            if (processeds == _this.elements.length)
             {
                 if (onLoad != null)
-                    onLoad.call(_context_ || this, htmlText, this, _onLoadArguments_);
+                {
+                    onLoad.call(_context_ || _this, htmlText, _this, _onLoadArguments_);
+                }
 
                 if (c.getAttribute("onload") != null)
                 {
                     eval(c.getAttribute("onload"));
                 }
             }
-        });
+        }, this);
     });
     //onLoad.call(_context_ || this, htmlText, this, _onLoadArguments_);
     
     
 });
 
+
+_SJL.alreadyImportedCSS ={};
+_SJL.alreadyImportedJavascript ={};
 SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
     if (!SJL.hasOwnProperty("_loadedComponents"))
         SJL._loadedComponents = [];
     
     this.cacheOrGet(htmlName, function (result, adicionalArgs,  request) {
         if (!request || ((request.status >= 200) && (request.status < 300))) {    
-            this.loadHtmlText(result, onLoad, _clearHtml_, _context_, _onLoadArguments_);
+
+            //if javascript and css already imported, discart them
+            var discartJsCss = true;
+            if (!_SJL.alreadyImportedCSS[htmlName] || !_SJL.alreadyImportedJavascript[htmlName])
+            {
+                discartJsCss = false;
+                _SJL.alreadyImportedCSS[htmlName] = true;
+                _SJL.alreadyImportedJavascript[htmlName] = true;
+            }
+
+            this.loadHtmlText(result, onLoad, _clearHtml_, _context_, _onLoadArguments_, discartJsCss);
         }
         else
         {
@@ -1006,7 +1022,8 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         var appInstance = null;
         appArgumentsArray = appArgumentsArray || null;
 
-        //create a reference to appSPointer in appInstance (create a new SJL, ignoring the use of pool, i.e., creating a permanent instance)
+        //create a reference to appSPointer in appInstance (create a new SJL, ignoring the use of pool,
+        //i.e., creating a permanent instance)
         var fixAppSPointer = $(appSPointer.elements, true);
 
         //if this method has called with '/' at end of appName, remove them
@@ -1018,7 +1035,8 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         //create a new instance of component javascript class
         eval('if (typeof(' + appName + ') != "undefined"){ appInstance = new ' + appName +'(fixAppSPointer, appArgumentsArray);}else{console.log("SJL could not locate the class \'"+appName+"\'");}');
         
-        //create a pointer to appIntance in the appIntance as SJL_currApp. This will be used at possible next object load to destroy the instance (look at start of this function)
+        //create a pointer to appIntance in the appIntance as SJL_currApp. This will be used at possible
+        //next object load to destroy the instance (look at start of this function)
         appSPointer.setProperty("SJL_CurrAPP", appInstance);
 		try{
 			appInstance.controlledElement = appSPointer.elements[0];
@@ -1027,7 +1045,8 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 			console.error(e);
 		}
         
-        //to facilitate the development, create some more references to the new instance of the component (one of which is with the class name in camelCase)
+        //to facilitate the development, create some more references to the new instance of the component
+        //(one of which is with the class name in camelCase)
         //{
             var camelizedAppName = appName[0].toLowerCase() + (appName.length > 1 ? appName.substring(1) : ""); 
 
@@ -1052,8 +1071,9 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 				appSPointer.setProperty('javascript', jsApps);
 			//}
 		
-            //Now, it creates some references to the new instance of the component in child elements. This will allow events (such as onclick, onouseover, 
-            //ontouchstart, ...) to be easily accessed by HTML (eg: <div onclick = "componentCamelCaseName.Method)
+            //Now, it creates some references to the new instance of the component in child elements.
+            //This  will  allow  events (such as onclick, onouseover, ontouchstart, ...) to be easily
+            //accessed by HTML (eg: <div onclick = "componentCamelCaseName.Method)
             appSPointer.$("*").do(function(currEl){ //currEl) => {
                 eval ("currEl."+appName+"=appInstance");
                 eval ("currEl."+appName+"Instance=appInstance");
@@ -1066,7 +1086,8 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 				
             
                 if (!currEl.app){
-                    //don't set appInstance property, because it is used by SJL to destroy activities. If you use appInstance here and try to load a component inside the elements of appSPointer, the curren appInstance will be destroyed (the desctructor function will be called);
+                    //don't set appInstance property, because it is used by SJL to destroy activities.
+                    //If you use appInstance here and try to load a component inside the elements of appSPointer, the curren appInstance will be destroyed (the desctructor function will be called);
                     currEl.ctrl = appInstance;
                     currEl.app = appInstance;
                 }
@@ -1074,7 +1095,8 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
             });
         //}
         
-        //Just as references to the new object were created in the HTML elements, references to the container element in the new object are created below.
+        //Just as references to the new object were created in the HTML elements, references to the
+        //container element in the new object are created below.
         //{
             if (appInstance && !appInstance.rootS){
     			appInstance.sRoot = fixAppSPointer;
@@ -1087,9 +1109,10 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
             }
         //}
 
-        //Now, to help further the development, in the container element (only in the container element) are created methods with the same 
-        //names of the methods of the new object. This way it is easy to call methods of the new object, just take the container element 
-        //and call the methodo with the same name. These methods will redirect execution into the new object.
+        //Now, to help further the development, in the container element (only in the container element)
+        //are  created methods with the same names of the methods of the new object. This way it is easy
+        //to  call  methods of the new object, just take the container element and call the methodo with
+        //the same name. These methods will redirect execution into the new object.
         //{
             //get methods defineds in the contructor
 			if (appInstance){
@@ -1125,11 +1148,11 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 
 
         
-        //It now takes all the attributes of the container element and creates properties with the same names and values in the new object 
-        //(appIntance). Also check if there is a set method on the object, if it exists, call it with, sending the value by parameter
+        //It now takes all the attributes of the container element and creates properties
+        //with  the  same  names and values in the new object (appIntance). Also check if 
+        //there  is  a  set method on the object, if it exists, call it with, sending the
+        //value by parameter
         //{
-            
-
             SJL.__AttributeChanged = function(element, attribute, newValue){
                 var appInstancesMethods = element.appInstanceMethods;
                 var destinationInstance = element.SJL_CurrAPP;
@@ -1143,7 +1166,6 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                         destinationInstance[currMethod].call(destinationInstance, newValue, element);
                 };
             }
-
 
             //hooks setAttribute method of elements
             appSPointer.do(function(curr){
@@ -1171,8 +1193,8 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                         try{
                             if (this.SJL_CurrAPP)
                                 SJL.__AttributeChanged(this, name, value);
-                        }catch{
-                            console.log("erro ao setar o attributo ", name, " como valor ", value, "do elemento", this);
+                        }catch (e) {
+                            console.log("Error setting attribute ", name, " with value ", value, " to element ", this, ":", e);
                         }
                     };
                 }
@@ -1240,7 +1262,7 @@ SJL.extend(["callEvent", "callEventAttribute"], function(attributeName, keysValu
                 if (typeof(currAttrib.value) == "function")
                     currAttrib.value.apply(currEl, values);
                 else
-                    //func a function with arguments names as properties names of 'keysValuesObject' object and 
+                    //func a function with arguments names as properties names of 'keysValuesObject' object
                     //and arguments values as 'values' vector
                     eval(
                         '(function('+argsNames+'){'+
@@ -1300,8 +1322,8 @@ _SJL.pauseAutoLoadAppFromUrl = false;
  * @param {function} onNotLoad - A function to be called when SJL encounters an error to load an activity 
  * @param {function} onLoad - A function to be called when SJL loads an activity with sucessfull
  * @param {boolean} _forceFirst_ - Indicates if the SJL must parse the current URL. This argument is optional 
- *                               - and its defautl value is 'true'. If you pass 'false' to this, the SJL just will load first activity when the 
- *                               - url is changed by first time.
+ *                               - and its defautl value is 'true'. If you pass 'false' to this, the SJL just
+ *                               - will load first activity when the url is changed by first time.
  * @param {boolean} _prefixOrFolder_ - Uses a prefix folder for load activities. It can be used to best organize 
  *                                   - application and prevent poluition of the url. Example: If you specify 
  *                                   - 'MyApp/MyActivities' for this parameter and try to open url 
