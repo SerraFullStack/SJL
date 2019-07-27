@@ -1358,7 +1358,7 @@ SJL.extend(["autoLoadAppFromUrl", "autoLoadActivityFromUrl"], function (onNotLoa
 
 
     _default_ == _default_ || null;
-    if (_default_ != null)
+    if (_default_ || false)
     {
         if (window.location.href.indexOf('#') == -1)
             window.location.href += "#"+_default_;
@@ -1718,7 +1718,8 @@ SJL.SJLStartConf = {
 		activitiesLocation:null,
 		activityNotFoundCallback: function(){},
 		activityFoundCallback: function(){},
-		element: "body"
+        element: "body",
+        default:null
 	}
 };
 
@@ -1743,8 +1744,8 @@ SJL.start = function(_conf_){
 		$(_conf_.urlMonitor.element, true).autoLoadActivityFromUrl(
 			_conf_.urlMonitor.activityNotFoundCallback,
 			_conf_.urlMonitor.activityFoundCallback,
-			true, 
+			_conf_.urlMonitor.default, 
 			_conf_.urlMonitor.activitiesLocation
-		);
+        );
 	};
 };
