@@ -496,6 +496,16 @@ SJL.extend("request", function (method, url, data, callback, _context_, _callbac
     var xhttp = new XMLHttpRequest();
     //set headers
 
+    if (Promise)
+    {
+        var _accept;
+        var _reject;
+        var _prom = new Promise(function(accept, reject){
+            _accept = accept;
+            _reject = reject;
+        })
+    }
+
     xhttp.open(method, url, true);
     xhttp.method = method.toUpperCase();
 
@@ -526,37 +536,40 @@ SJL.extend("request", function (method, url, data, callback, _context_, _callbac
     }
     xhttp.onreadystatechange = function() {
         if (this.readyState == 4){// && this.status == 200) {
-            if (callback != null) {
-                var resp = this.responseText;
-				var contentType = xhttp.getResponseHeader("Content-Type");
-                if (contentType && contentType.toLowerCase().indexOf("application/json") > -1)
-                    resp = JSON.parse(resp);
+            var resp = this.responseText;
 
+            var contentType = xhttp.getResponseHeader("Content-Type");
+            if (contentType && contentType.toLowerCase().indexOf("application/json") > -1)
+                resp = JSON.parse(resp);
+
+            if (callback != null) 
                 callback.call(_context_ || this, resp, _callbackAditionalArgs_, xhttp, this);
-            }
+
+            if (Promise)
+                _accept({data: resp, xhttp: xhttp, sjl: this, aditionalArgs: _callbackAditionalArgs_ || null});
         }
     };
 
-    
-    
+    xhttp.onerror = function(e){
+        _reject(e);
+    };
+
     if (_onBeforeSend_)
         _onBeforeSend_.call(_context_, xhttp);
         
     if ("post put".indexOf(method.toLowerCase()) > -1)
-    {
         xhttp.send(data);
-    }
     else
-    {
         xhttp.send();
-    }
 
-    return this;
+    if (Promise)
+        return _prom;
+    else
+        return this;
 });
 
 SJL.extend("get", function (url, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_) {
-    this.request("GET", url, null, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_);
-    return this;
+    return this.request("GET", url, null, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_);
 });
 
 
@@ -585,23 +598,20 @@ SJL.extend("cacheOrGet", function (url, callback, _context_, _callbackAditionalA
             callback.call(_context_ || this, response, _callbackAditionalArgs_, request, sjl);
         }, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_);
         
-        return this;
     }
+
 });
 
 SJL.extend("post", function (url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_) {
-    this.request("POST", url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_);
-    return this;
+    return this.request("POST", url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_);
 });
 
 SJL.extend("put", function (url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_) {
-    this.request("PUT", url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_);
-    return this;
+    return this.request("PUT", url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_);
 });
 
 SJL.extend("delete", function (url, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_) {
-    this.request("DELETE", url, null, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_);
-    return this;
+    return this.request("DELETE", url, null, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_);
 });
 
 SJL.extend(["includeUsingTags", "loadScriptUsingTags", "scriptUsingTags", "requireUsingTags"], function (scriptsSrc, onDone, _context_) {
