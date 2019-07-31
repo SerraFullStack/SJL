@@ -324,11 +324,10 @@ SJL.extend("getValue", function () {
 @param {Function} endCallback - The callback to be executed when the animation is done
 @param {object} _pointers_ - The optional params to be passed to callback and endCallback
 */
-_SJL._minAnimationFrameTime = 5;
+_SJL._minAnimationFrameTime = 15;// 15 ~= 66 frames/second. Its is used when browser does't support window.requestAnimationFrame;
 SJL.extend(["animate", "ani"],  function (from, to, milisseconds, callback, endCallback, _pointers_, _minFrameTime_, __data__) {
     //ons first run (__data__ is private like), create a object for __data__ with the all data necessary to make the
     //animation.
-	
 	
     __data__ = __data__ ||  {
         from: from,
@@ -371,9 +370,18 @@ SJL.extend(["animate", "ani"],  function (from, to, milisseconds, callback, endC
     
     //checks if the animatin is aborted. In case of "false", continue animating
     if ((currTime < __data__.time) && (!__data__.aborted)) {
-        setTimeout(function (__this, __data) {
-            __this.animate(null, null, null, null, null, null, null, __data);
-        }, __data__.minFrameTime, this, __data__);
+        if (window.requestAnimationFrame)
+        {
+            var __this = this;
+            window.requestAnimationFrame(function(){
+                __this.animate(null, null, null, null, null, null, null, __data__);
+            });
+        }
+        else{
+            setTimeout(function (__this, __data) {
+                __this.animate(null, null, null, null, null, null, null, __data);
+            }, __data__.minFrameTime, this, __data__);
+        }
     }
 
     return this;
@@ -1186,25 +1194,27 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                     
                     
                     curr.setAttribute = function(name, value){
-                        this.__setAttribute(name, value);
-                        /*  When an  activitiy is loaded (see the beginning of this method), the searches 
-                        looks the root element for any html content. If something is found, SJL move that
-                        content  to an attribute called "content". This attribute is sent to class of the
-                        new activity in a for loop that is implemented bellow (out of current if). 
-                        
-                            But  there  is  one  thing  that  should  be  considered  here  (before  call
-                        __AttributeChanged). __AttributeChanged uses the property 'SJL_CurrAPP', which is
-                        a  reference  to class instance of new activity. When this 'content' attribute is
-                        created  in  the root element (with its HTML content), the 'SJL_CurrAPP' property
-                        (also   of   root   element)   is   not  yet  exists,  raising  an  exception  in
-                        __AttributeChanged   event.  Therefore,  it  is  necessary  to  verify  that  the
-                        'SJL_CurrAPP'  property  already  exists in the 'curr' element before calling SJL
-                        method '__AttributeChanged'.*/
-                        try{
-                            if (this.SJL_CurrAPP)
-                                SJL.__AttributeChanged(this, name, value);
-                        }catch (e) {
-                            console.log("Error setting attribute ", name, " with value ", value, " to element ", this, ":", e);
+                        if (value != curr.getAttribute(name)){
+                                this.__setAttribute(name, value);
+                            /*  When an  activitiy is loaded (see the beginning of this method), the searches 
+                            looks the root element for any html content. If something is found, SJL move that
+                            content  to an attribute called "content". This attribute is sent to class of the
+                            new activity in a for loop that is implemented bellow (out of current if). 
+                            
+                                But  there  is  one  thing  that  should  be  considered  here  (before  call
+                            __AttributeChanged). __AttributeChanged uses the property 'SJL_CurrAPP', which is
+                            a  reference  to class instance of new activity. When this 'content' attribute is
+                            created  in  the root element (with its HTML content), the 'SJL_CurrAPP' property
+                            (also   of   root   element)   is   not  yet  exists,  raising  an  exception  in
+                            __AttributeChanged   event.  Therefore,  it  is  necessary  to  verify  that  the
+                            'SJL_CurrAPP'  property  already  exists in the 'curr' element before calling SJL
+                            method '__AttributeChanged'.*/
+                            try{
+                                if (this.SJL_CurrAPP)
+                                    SJL.__AttributeChanged(this, name, value);
+                            }catch (e) {
+                                console.log("Error setting attribute ", name, " with value ", value, " to element ", this, ":", e);
+                            }
                         }
                     };
                 }
@@ -1547,6 +1557,149 @@ SJL.extend("getComputedCssProperty", function(propertyName, _defaultValue_){
         return _defaultValue_;
 });
 
+SJL.extend("download", function(suggestFileName, _mimeType_, _optionalAnotherContent_){
+    _optionalAnotherContent_ = _optionalAnotherContent_ || this.getValue();
+
+    _mimeType_ = _mimeType_ || 'text/html';
+    suggestFileName = suggestFileName || 
+        this.elements[0].getAttribute("name") || 
+        this.elements[0].getAttribute("id") ||
+        this.elements[0].tagName;
+    
+    if (suggestFileName.indexOf('.') == -1)
+        suggestFileName += '.html';
+
+    var a = document.createElement("a");
+    a.style.display = "none";
+    a.download=suggestFileName;
+    document.body.appendChild(a);
+    var urlDt = URL.createObjectURL(new Blob([_optionalAnotherContent_], {type:_mimeType_}));
+    a.href = urlDt;
+    a.click();
+    document.body.removeChild(a);
+});
+
+SJL.extend("forceClone", function(maxLevels, obj, currLevel = 0){
+    obj = obj || this.elements;
+    maxLevels = maxLevels || 3;
+    var ret = obj.constructor == Array ? [] : {};
+    for (var c in obj)
+    {
+        try{
+            if (typeof(obj[c]) == "object"){
+                if (currLevel < maxLevels)
+                    ret[c] = this.forceClone(maxLevels, obj[c], currLevel+1);
+            }
+            else
+                ret[c] = obj[c];
+        }
+        catch(e){}
+    }
+       
+   return ret;
+});
+
+SJL.extend(["stringify", "toJson"], function(obj){
+    obj = obj || this.forceClone();
+    var cache = [];
+    var json = JSON.stringify(obj, function(key, value) {
+        if (typeof value === 'object' && value !== null) {
+            if (cache.indexOf(value) !== -1) {
+                // Circular reference found, discard key
+                return;
+            }
+            // Store value in our collection
+            cache.push(value);
+        }
+        return value;
+    });
+    delete cache;
+    return json;
+});
+
+/*This function allow to bind two variables, keeping their values equal. Must be used using the default SJL instance (SJL.bind)
+ If you use object properties, you must specifi each object in 'context' arguments. */
+SJL.extend("bind", function(address1, address2, address1ctx, address2ctx){
+
+    (function(){eval("v1 = "+address1)}).call(address1ctx);
+    (function(){eval("v2 = "+address2)}).call(address2ctx);
+    var currVal = v1 || v2;
+    (function(){eval(address1 + "=currVal")}).call(address1ctx);
+    (function(){eval(address2 + "=currVal")}).call(address2ctx);
+
+    new SJL.Watch(
+        function(){
+            var nV = "";
+            (function(){ 
+                eval ("nV = "+address1);
+            }).call(address1ctx);
+            return nV;
+        }, function(nVal){
+            (function(){
+                eval (address2 + " = nVal");
+            }).call(address2ctx);
+        }
+    );
+
+    new SJL.Watch(
+        function(){
+            var nV = "";
+            (function(){ 
+                eval ("nV = "+address2);
+            }).call(address2ctx);
+            return nV;
+        }, function(nVal){
+            (function(){
+                eval (address1 + " = nVal");
+            }).call(address1ctx);
+        }
+    );
+});
+
+/* Allows to bind an attribute with a variable. This only workd for SJL instances with one element. 
+If you use an object property, you must specify this object in the 'addressContext' argument. */
+SJL.extend(["bindAttribute"], function(evalAddress, attributeName, addressContext){
+    var _this = this;
+    (function(){
+        var currVal = _this.elements[0].getAttribute(attributeName);
+        if (!currVal)
+            eval ("currVal = "+evalAddress);
+
+        if (!currVal)
+            currVal = null;
+        
+        _this.elements[0].setAttribute(attributeName, currVal);
+        eval (evalAddress + " = currVal");
+
+
+    }).call(addressContext);
+
+    //function(varName_Or_GetValueFunc, func, _context_, _arguments_, _logErrors_, _stopOnError_)
+
+    new SJL.Watch(
+        function(){
+            var nV = "";
+            (function(){ 
+                eval ("nV = "+evalAddress);
+
+            }).call(addressContext);
+            return nV;
+        }, function(nVal){
+            this.setAttribute(attributeName, nVal);
+        }, this
+
+    );
+
+    new SJL.Watch(
+        function(){
+            return this.elements[0].getAttribute(attributeName);
+        }, function(nVal){
+            (function(){
+                eval (evalAddress + " = nVal");
+            }).call(addressContext);
+        }, this
+    );
+});
 
 SJL.cache = new (function(){
     this.destinations={
