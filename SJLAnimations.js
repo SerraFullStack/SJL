@@ -90,4 +90,36 @@
             this.setCssProperty(_cssProperty_, "rgb("+newColor_r+","+newColor_g+","+newColor_b+")");
         }, _onEnd_, _context_);
     });
+
+    SJL.extend("animateColor2", function(color1, color2, milisseconds, callback, _onEnd_, _context_){
+        _context_ = _context_ || this;
+        if (this.elements.length > 1)
+        {
+            var waitings = 0;
+            this.do(function(currElement){
+                waitings++;
+                $(currElement).animateColor2(color1, color2, milisseconds, callback, function(){
+                    waitings++;
+                    if (waitings == 0)
+                        _onEnd_.call(_context_);
+                });
+            });
+
+            return
+        }
+        
+        
+        var orColor = SJL.getRgbComponents(color1);
+        var destColor = SJL.getRgbComponents(color2);
+        
+        //get current color
+        this.animate(0, 1, milisseconds, function(curr){
+            //(DestColor - OrColor)+curr + OrColor
+            var newColor_r =  parseInt((destColor.r - orColor.r) * curr + orColor.r);
+            var newColor_g =  parseInt((destColor.g - orColor.g) * curr + orColor.g);
+            var newColor_b =  parseInt((destColor.b - orColor.b) * curr + orColor.b);
+
+            callback.call(_context_, "rgb("+newColor_r+","+newColor_g+","+newColor_b+")", destColor);
+        }, _onEnd_, _context_);
+    });
 })();
