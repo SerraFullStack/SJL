@@ -1193,27 +1193,35 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                     curr.__setAttribute = curr.setAttribute;
                     
                     
-                    curr.setAttribute = function(name, value){
+                    curr.setAttribute = function(name, value, __dispatchActivityEvents__)
+                    {
                         if (value != curr.getAttribute(name)){
-                                this.__setAttribute(name, value);
-                            /*  When an  activitiy is loaded (see the beginning of this method), the searches 
-                            looks the root element for any html content. If something is found, SJL move that
-                            content  to an attribute called "content". This attribute is sent to class of the
-                            new activity in a for loop that is implemented bellow (out of current if). 
-                            
-                                But  there  is  one  thing  that  should  be  considered  here  (before  call
-                            __AttributeChanged). __AttributeChanged uses the property 'SJL_CurrAPP', which is
-                            a  reference  to class instance of new activity. When this 'content' attribute is
-                            created  in  the root element (with its HTML content), the 'SJL_CurrAPP' property
-                            (also   of   root   element)   is   not  yet  exists,  raising  an  exception  in
-                            __AttributeChanged   event.  Therefore,  it  is  necessary  to  verify  that  the
-                            'SJL_CurrAPP'  property  already  exists in the 'curr' element before calling SJL
-                            method '__AttributeChanged'.*/
-                            try{
-                                if (this.SJL_CurrAPP)
-                                    SJL.__AttributeChanged(this, name, value);
-                            }catch (e) {
-                                console.log("Error setting attribute ", name, " with value ", value, " to element ", this, ":", e);
+                            this.__setAttribute(name, value);
+
+                            if (typeof(__dispatchActivityEvents__) == 'undefined')
+                                __dispatchActivityEvents__ = true;
+
+                            if (__dispatchActivityEvents__ != false)
+                            {
+                                /*  When an  activitiy is loaded (see the beginning of this method), the searches 
+                                looks the root element for any html content. If something is found, SJL move that
+                                content  to an attribute called "content". This attribute is sent to class of the
+                                new activity in a for loop that is implemented bellow (out of current if). 
+                                
+                                    But  there  is  one  thing  that  should  be  considered  here  (before  call
+                                __AttributeChanged). __AttributeChanged uses the property 'SJL_CurrAPP', which is
+                                a  reference  to class instance of new activity. When this 'content' attribute is
+                                created  in  the root element (with its HTML content), the 'SJL_CurrAPP' property
+                                (also   of   root   element)   is   not  yet  exists,  raising  an  exception  in
+                                __AttributeChanged   event.  Therefore,  it  is  necessary  to  verify  that  the
+                                'SJL_CurrAPP'  property  already  exists in the 'curr' element before calling SJL
+                                method '__AttributeChanged'.*/
+                                try{
+                                    if (this.SJL_CurrAPP)
+                                        SJL.__AttributeChanged(this, name, value);
+                                }catch (e) {
+                                    console.log("Error setting attribute ", name, " with value ", value, " to element ", this, ":", e);
+                                }
                             }
                         }
                     };
