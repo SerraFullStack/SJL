@@ -1587,7 +1587,8 @@ SJL.extend("download", function(suggestFileName, _mimeType_, _optionalAnotherCon
     document.body.removeChild(a);
 });
 
-SJL.extend("forceClone", function(maxLevels, obj, currLevel = 0){
+SJL.extend("forceClone", function(maxLevels, obj, currLevel){
+    currLevel = currLevel || 0;
     obj = obj || this.elements;
     maxLevels = maxLevels || 3;
     var ret = obj.constructor == Array ? [] : {};
