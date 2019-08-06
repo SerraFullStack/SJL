@@ -13,6 +13,63 @@ See bellow an use example of the oselector:
 $(“.allElementsWithThisClass”)
 ```
 
+### SJL Methods to work with elements	
+	
+#### clearObject
+#### hide
+#### show
+#### setValue
+#### getValue
+#### animate
+#### upSpeedAnimate
+#### downSpeedAnimate
+#### include
+#### includeUsingTags
+#### autoLoadComponents
+#### loadHtmlText
+#### loadHtml
+#### preloadHtml
+#### loadStaticComponent
+#### loadActivity
+#### callEvent
+#### setProperty
+#### setAttribute
+#### getProperty
+#### setCssProperty
+#### getCssProperty
+#### getComputedCssProperty
+#### download
+#### stringify
+#### bind
+#### bindAttribute
+
+## includding css and javascript files
+
+## filling elemnts with HTML files
+
 ## Loading components
 SJL can load components by addresses in the elements in the DOM. When SJL loads a component, it perform many operations and creste many references in the created object. 
 The first thing to be highlited is the instance of loaded component: When SJL loads an html file into a DOM element, its create an instance of the component class if this name is equals to filename witout the extension, eg: If the file “MyComponent.html” contains a class “MyComponent”, this class will be instantiated. Once time instantiated, the chosen DOM element will receive an reference to new object. This reference will be the same name of classe (on our example, the new property of the element will be called “MyComponent”).
+
+## Activities
+
+## Auto loading activities by parsing the current URL
+
+# using SJL as Framework
+
+## Starting up SJL
+
+
+# Requests 
+
+## Requests with callbacks
+
+## Requests with Promises
+
+## get
+
+## post
+
+## delete
+
+## cacheOrGet
