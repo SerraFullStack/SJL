@@ -328,7 +328,7 @@ _SJL._minAnimationFrameTime = 15;// 15 ~= 66 frames/second. Its is used when bro
 SJL.extend(["animate", "ani"],  function (from, to, milisseconds, callback, endCallback, _pointers_, _minFrameTime_, __data__) {
     //ons first run (__data__ is private like), create a object for __data__ with the all data necessary to make the
     //animation.
-	
+
     __data__ = __data__ ||  {
         from: from,
         to: to,
@@ -782,7 +782,7 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                             if (onDone)
                                 onDone.call(_context_ || _this);
                         }
-                    });
+                    }, null, function(){ console.error("AutoLoadComponent error loading component", componentName)});
                 }
                 else
                 {
@@ -1588,16 +1588,21 @@ SJL.extend("download", function(suggestFileName, _mimeType_, _optionalAnotherCon
 });
 
 SJL.extend("forceClone", function(maxLevels, obj, currLevel){
-    currLevel = currLevel || 0;
+    if (typeof(currLevel) == 'undefined') currLevel = 1;
     obj = obj || this.elements;
-    maxLevels = maxLevels || 3;
+    if (typeof(maxLevels) == 'undefined') maxLevels = 3;
     var ret = obj.constructor == Array ? [] : {};
+    if (maxLevels <= 0)
+        return {};
+
     for (var c in obj)
     {
         try{
             if (typeof(obj[c]) == "object"){
                 if (currLevel < maxLevels)
                     ret[c] = this.forceClone(maxLevels, obj[c], currLevel+1);
+                else
+                    ret[c]  = obj[c].constructor == Array ? [] : {};
             }
             else
                 ret[c] = obj[c];
