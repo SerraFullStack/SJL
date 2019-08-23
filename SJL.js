@@ -86,6 +86,22 @@
 
             return ret;
         };
+		
+		this.go = function(activityName, args){
+            var argsStr = "";
+            console.log(arguments[0][0]);
+            if (arguments[0][0] != '#')
+                argsStr = "#";
+                
+            for (var c =0; c < arguments.length; c++)
+            {
+                argsStr += ""+arguments[c] + (c < arguments.length-1 ? "/":"");
+            }
+
+            window.location.href = argsStr;
+
+            
+        }; this.navigate = this.go;
 
 		
 		this.SInstancesBySelector = {};
