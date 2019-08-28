@@ -86,8 +86,8 @@
 
             return ret;
         };
-		
-		this.go = function(activityName, args){
+
+        this.go = function(activityName, args){
             var argsStr = "";
             console.log(arguments[0][0]);
             if (arguments[0][0] != '#')
@@ -344,7 +344,7 @@ _SJL._minAnimationFrameTime = 15;// 15 ~= 66 frames/second. Its is used when bro
 SJL.extend(["animate", "ani"],  function (from, to, milisseconds, callback, endCallback, _pointers_, _minFrameTime_, __data__) {
     //ons first run (__data__ is private like), create a object for __data__ with the all data necessary to make the
     //animation.
-
+	
     __data__ = __data__ ||  {
         from: from,
         to: to,
@@ -798,7 +798,7 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                             if (onDone)
                                 onDone.call(_context_ || _this);
                         }
-                    }, null, function(){ console.error("AutoLoadComponent error loading component", componentName)});
+                    });
                 }
                 else
                 {
@@ -998,7 +998,6 @@ SJL.extend(["loadComponent", "loadStaticComponent"], function (htmlName, onLoad,
  * Is very similiar to loadComponent, but with de advantage of auto instanciate the class.
  */
 SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName, onLoad, appArgumentsArray, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
-
 	//checks by old running app and notify them	
 	if ((this.elements[0].hasOwnProperty("SJL_CurrAPP") && this.elements[0].SJL_CurrAPP != null))
 	{
@@ -1270,6 +1269,9 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         //}
 		delete fixAppSPointer;
 
+        
+        //if there is a event called sjlonload on element, call them
+        this.callEvent("sjlonload", {sjl: this, instance: appInstance});
 
 		onLoad = onLoad || null;
         if (onLoad != null)
@@ -1604,21 +1606,16 @@ SJL.extend("download", function(suggestFileName, _mimeType_, _optionalAnotherCon
 });
 
 SJL.extend("forceClone", function(maxLevels, obj, currLevel){
-    if (typeof(currLevel) == 'undefined') currLevel = 1;
+    currLevel = currLevel || 0;
     obj = obj || this.elements;
-    if (typeof(maxLevels) == 'undefined') maxLevels = 3;
+    maxLevels = maxLevels || 3;
     var ret = obj.constructor == Array ? [] : {};
-    if (maxLevels <= 0)
-        return {};
-
     for (var c in obj)
     {
         try{
             if (typeof(obj[c]) == "object"){
                 if (currLevel < maxLevels)
                     ret[c] = this.forceClone(maxLevels, obj[c], currLevel+1);
-                else
-                    ret[c]  = obj[c].constructor == Array ? [] : {};
             }
             else
                 ret[c] = obj[c];
@@ -1910,7 +1907,6 @@ SJL.start = function(_conf_){
     _conf_ = _conf_ || SJL.SJLStartConf;
 
     if (typeof(_conf_.autoLoadComponents) == 'undefined' || _conf_.autoLoadComponents == true)
-        SJL.autoLoadComponents(document.body);
         SJL.autoLoadComponents(document.body);
 
     
