@@ -872,8 +872,18 @@ SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHt
         var scripts = $(temp).$("script").do(function (currEl) {
             if (!_discardCssAndJs_)
 			{
-				try{
-					eval(currEl.innerHTML);
+                try{
+                    if (currEl.getAttribute("SJLEnable"))
+                    {
+                        var parse = false;
+                        eval ("parse = "+currEl.getAttribute("SJLEnable"));
+                        if ("1true".indexOf(parse) > -1)
+                            eval(currEl.innerHTML);
+                        else
+                            currEl.parentNode.removeChild(currEl); 
+                    }
+                    else
+                        eval(currEl.innerHTML);
 				}
 				catch(err){
 					console.error(err);
@@ -884,10 +894,20 @@ SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHt
 
         var css = $(temp).$("style").do(function (currEl) {
             if (!_discardCssAndJs_) {
-                document.head.appendChild(currEl);
+                if (currEl.getAttribute("SJLEnable"))
+                {
+                    var parse = false;
+                    eval ("parse = "+currEl.getAttribute("SJLEnable"));
+                    if ("1true".indexOf(parse) > -1)
+                        document.head.appendChild(currEl);
+                    else
+                        currEl.parentNode.removeChild(currEl);
+                }
+                else
+                    document.head.appendChild(currEl);
             }
             else
-                currEl.parentNode.removeChild(currEl);
+               currEl.parentNode.removeChild(currEl);
         });
 		
 		delete scripts;
