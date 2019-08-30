@@ -1437,7 +1437,7 @@ SJL.extend("__processForeachs", function(onDone, attributesToElements){
                     var toEval = copy.substr(startPos+2, endPos-(startPos+2));
                     var toReplace = copy.substr(startPos, endPos-startPos+2);
                     var backup = false;
-                    if (toEval.trim().indexOf(iteratorName) > -1)
+                    //if (toEval.trim().indexOf(iteratorName) > -1)
                     {
 
                         try{
@@ -1447,8 +1447,8 @@ SJL.extend("__processForeachs", function(onDone, attributesToElements){
                             backup = true;
                         }
                     }
-                    else
-                        backup = true;
+                    //else
+                    //    backup = true;
 
                     if (backup)
                     {
