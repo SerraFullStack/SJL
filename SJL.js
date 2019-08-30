@@ -272,13 +272,15 @@ SJL.extend("show", function(){
     for (var c in this.elements)
     {
         //checks if the "hide" method saved the style property
-        if (this.elements[c].hasOwnProperty("__oldDisplay") && this.elements[c].__oldDisplay != null)
+        if (this.elements[c].hasOwnProperty("__oldDisplay") && this.elements[c].__oldDisplay != null && this.elements[c].__oldDisplay != "none")
         {
             this.elements[c].style.display = this.elements[c].__oldDisplay;
             delete this.elements[c].__oldDisplay;
         }
         else
+        {
             this.elements[c].style.display = "block";
+        }
     }
 
     return this;
@@ -828,8 +830,11 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
 	delete allElements;
 });
 
-SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHtml, _context_, _onLoadArguments_, _discardCssAndJs_)
+SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHtml, _context_, _onLoadArguments_, _discardCssAndJs_, autoLoadComponents_default_true)
 {
+    if (typeof(autoLoadComponents_default_true) == 'undefined')
+        autoLoadComponents_default_true = true;
+
     onLoad = onLoad || null;
 
     if ((typeof(_clearHtml_) == 'undefined') || (_clearHtml_ == true))
@@ -918,23 +923,31 @@ SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHt
         //checks if to be clear the html
             
         c.innerHTML += nHtml;
-
         var _this = this;
-        _this.autoLoadComponents(c, function(){
-            processeds++;
-            if (processeds == _this.elements.length)
-            {
-                if (onLoad != null)
+        if (autoLoadComponents_default_true == true)
+        {
+            _this.autoLoadComponents(c, function(){
+                processeds++;
+                if (processeds == _this.elements.length)
                 {
-                    onLoad.call(_context_ || _this, htmlText, _this, _onLoadArguments_);
-                }
+                    if (onLoad != null)
+                    {
+                        onLoad.call(_context_ || _this, htmlText, _this, _onLoadArguments_);
+                    }
 
-                if (c.getAttribute("onload") != null)
-                {
-                    eval(c.getAttribute("onload"));
+                    if (c.getAttribute("onload") != null)
+                    {
+                        eval(c.getAttribute("onload"));
+                    }
                 }
+            }, this);
+        }
+        else{
+            if (onLoad != null)
+            {
+                onLoad.call(_context_ || _this, htmlText, _this, _onLoadArguments_);
             }
-        }, this);
+        }
     });
     //onLoad.call(_context_ || this, htmlText, this, _onLoadArguments_);
     
@@ -944,7 +957,7 @@ SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHt
 
 _SJL.alreadyImportedCSS ={};
 _SJL.alreadyImportedJavascript ={};
-SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
+SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_, autoLoadComponents_default_true) {
     if (!SJL.hasOwnProperty("_loadedComponents"))
         SJL._loadedComponents = [];
     
@@ -960,7 +973,7 @@ SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _onFailure_, _cl
                 _SJL.alreadyImportedJavascript[htmlName] = true;
             }
 
-            this.loadHtmlText(result, onLoad, _clearHtml_, _context_, _onLoadArguments_, discartJsCss);
+            this.loadHtmlText(result, onLoad, _clearHtml_, _context_, _onLoadArguments_, discartJsCss, autoLoadComponents_default_true);
         }
         else
         {
@@ -1007,11 +1020,11 @@ SJL.extend(["preloadHtml", "preload"], function (htmlFileName, onDone, _context_
 });
 
 
-SJL.extend(["loadComponent", "loadStaticComponent"], function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
+/*SJL.extend(["loadComponent", "loadStaticComponent"], function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
     if (htmlName.indexOf(".htm") == -1)
         htmlName += ".html";
     return this.loadHtml(htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
-});
+});*/
 
 
 /** This method load an html named [appName].html and automaticaly instanciate an javascript class named [appName].
@@ -1220,7 +1233,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                 };
             }
 
-            //hooks setAttribute method of elements
+            //hooks setAttribute and getAttribute  methods of elements
             appSPointer.do(function(curr){
                 
                 if (!curr.__setAttribute)
@@ -1268,6 +1281,45 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                     var currAttribute = attributes[cAttribute];
                     SJL.__AttributeChanged.call(window, curr, currAttribute.name, currAttribute.value);
                 }
+
+
+                if (!curr.__getAttribute)
+                {
+                    curr.__getAttribute = curr.getAttribute;
+                    
+                    
+                    curr.getAttribute = function(name, __dispatchActivityEvents__)
+                    {
+
+                        if (typeof(__dispatchActivityEvents__) == 'undefined')
+                            __dispatchActivityEvents__ = true;
+
+                        if (__dispatchActivityEvents__ != false)
+                        {
+                            try{
+                                if (this.SJL_CurrAPP){
+                                    var appInstancesMethods = this.appInstanceMethods;
+                                    var destinationInstance = this.SJL_CurrAPP;
+                    
+                                    var setName = "get" + name[0].toUpperCase() + (name.length > 1 ? name.substring(1) : "");
+                                    for (var currProp in appInstancesMethods)
+                                    {
+                                        var currMethod = appInstancesMethods[currProp];
+                                        if (currMethod.toLowerCase() == setName.toLowerCase())
+                                            return destinationInstance[currMethod].call(destinationInstance, this);
+                                    };
+
+                                    return this.__getAttribute(name);
+                                }
+                            }catch (e) {
+                                console.log("Error getting attribute ", name, " from element ", this, ":", e);
+                            }
+                        }
+                        else
+                            return this.__getAttribute(name);
+                    };
+                }
+
             });
         //}
 
@@ -1287,19 +1339,119 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
             if (typeof (appInstance.create) != 'undefined')
                 appInstance.create(appArgumentsArray);
         //}
-		delete fixAppSPointer;
+        delete fixAppSPointer;
+        //parse SJLLoops
+        this.__processForeachs(function(){
+            //autoload child components
+            var processeds = 0;
+            var _this = this;
+            this.do(function(c){
+                this.autoLoadComponents(c, function(){
+                    processeds++;
+                    if (processeds == _this.elements.length)
+                    {
+                        //if there is a event called sjlonload on element, call them
+                        this.callEvent("sjlonload", {sjl: this, instance: appInstance});
+                        this.callEvent("onload", {sjl: this, instance: appInstance});
 
-        
-        //if there is a event called sjlonload on element, call them
-        this.callEvent("sjlonload", {sjl: this, instance: appInstance});
-
-		onLoad = onLoad || null;
-        if (onLoad != null)
-		    onLoad.call(_context_ || appSPointer, appInstance, appSPointer, _onLoadArguments_);
-	}, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
+                        onLoad = onLoad || null;
+                        if (onLoad != null)
+                            onLoad.call(_context_ || appSPointer, appInstance, appSPointer, _onLoadArguments_);
+                    }
+                }, this);
+            });
+        });
+	}, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_, false);
 
     return this;
 });
+
+SJL.extend("__processForeachs", function(onDone){
+    //get all elements with propety SJLForeach or property SJLForIn
+    var SJLFors = this.$(["[sjlforeach]", "[sjlforin]"]);
+
+    //gets the elements from each curr element
+    SJLFors.do(function(currEl){
+        //get the attribute value
+        var attributeValue = currEl.getAttribute("sjlforeach") || currEl.getAttribute("sjlforin");
+        var iteratorName = "i";
+        var parentOfCurrEl = currEl.parentNode;
+        if (attributeValue.split(' ')[1] == 'in')
+        {
+            iteratorName = attributeValue.split(' ')[0];
+            attributeValue = attributeValue.substr(attributeValue.indexOf(' in ')+4);
+        }
+
+        //eval the attribute value
+        var value = (function(){return eval(attributeValue);}).call(currEl);
+
+        //removes attribute from element (to prevent a new call of foreach for curren element)
+        currEl.removeAttribute("sjlforeach");
+        currEl.removeAttribute("sjlforin");
+
+        //get currEl as text
+        var elementHtml = currEl.outerHTML;
+
+        //create a container element
+        var container = document.createElement('span');
+        parentOfCurrEl.insertBefore(container, currEl);
+
+        //remove currEl from his parent
+        currEl.parentNode.removeChild(currEl);
+
+        //scrols through the 'value' items
+        for (var valueI in value)
+        {
+            var currValue = value[valueI];
+            eval("var "+iteratorName + " = currValue");
+            //take a copy of the text
+            var copy = elementHtml;
+
+            //replace values
+            while (true){
+                //backup foreach inside elements
+
+                var startPos = copy.indexOf("{{");
+                if (startPos > -1){
+                    var endPos = copy.indexOf("}}");
+
+                    var toEval = copy.substr(startPos+2, endPos-(startPos+2));
+                    var toReplace = copy.substr(startPos, endPos-startPos+2);
+                    try{
+                        var evalResult = eval(toEval);
+                    }
+                    catch{
+                        copy = copy.replace("{{", "__backOpen__");
+                        copy = copy.replace("}}", "__backClose__");
+                        console.log("replaced: ", copy);
+                        continue
+                    }
+
+                    console.log("toEval", toEval);
+                    console.log("toReplace", toReplace);
+                    console.log("evalResult", evalResult);
+                    copy = copy.replace(new RegExp(toReplace, 'g'), evalResult);
+                }
+                else
+                    break;
+            }
+
+            //restore [[ and ]]
+            copy = copy.replace(new RegExp("__backOpen__", 'g'), "{{").replace(new RegExp("__backClose__", 'g'), '}}');
+
+            //add the new html to parent of currEl
+            var tempElement = document.createElement('span');
+            tempElement.innerHTML = copy;
+            container.appendChild(tempElement);
+
+        }
+        
+        
+        console.log("attributeValue = ", attributeValue, "->", value);
+
+    });
+    onDone.call(this);
+})
 
 /* call atributes like "onDoSomething" */
 //callEvent("onChange", {var:value, var2:value})
@@ -1512,6 +1664,21 @@ SJL.extend("setAttribute", function (name, value, _try_set_property_) {
     return this;
 });
 
+SJL.extend("getAttribute", function (name) {
+    var ret = [];
+    for (var c in this.elements)
+    {
+        ret.push(this.elements[c].getAttribute(name));
+    }
+
+    if (ret.length > 1)
+        return ret;
+    else if (ret.length == 1)
+        return ret[0];
+    else 
+        return null
+});
+
 /** Get a property from the elements
  * @param {string} name - the property name
  * @param {any} _defaultValue_ - A value that will be return if the system not locate the property in anyone element
@@ -1716,6 +1883,7 @@ SJL.extend(["bindAttribute"], function(evalAddress, attributeName, addressContex
             currVal = null;
         
         _this.elements[0].setAttribute(attributeName, currVal);
+        console.log(evalAddress + " = currVal");
         eval (evalAddress + " = currVal");
 
 

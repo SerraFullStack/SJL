@@ -51,6 +51,18 @@ $(“.allElementsWithThisClass”)
 SJL can load components by addresses in the elements in the DOM. When SJL loads a component, it perform many operations and creste many references in the created object. 
 The first thing to be highlited is the instance of loaded component: When SJL loads an html file into a DOM element, its create an instance of the component class if this name is equals to filename witout the extension, eg: If the file “MyComponent.html” contains a class “MyComponent”, this class will be instantiated. Once time instantiated, the chosen DOM element will receive an reference to new object. This reference will be the same name of classe (on our example, the new property of the element will be called “MyComponent”).
 
+#loops
+##SJLForeach
+	SJLForeach loop allows you to auto create html based in an Javascript array.
+	For each element in the informed element array, the SJL will make a copy of 
+	desired element.
+	
+``` html
+<div SJLForeach="c in [1,2,3,4,5,6,7]">
+	This div is the {{c}} in the div list
+<div>
+```
+
 ## Activities
 
 ## Auto loading activities by parsing the current URL
@@ -141,7 +153,9 @@ $(".slideTheseElements").animate(0, 100, (curr) =>{
 
 ### loading external html inside elements
 
-### loading a component inside a element
+### loading a activity/component inside a element
+
+#### SJLEnable - enabling or disable Css and Javascript parsing
 
 ### autoload components using SJLLoad
 
