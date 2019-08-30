@@ -1341,6 +1341,12 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         //}
         delete fixAppSPointer;
         //parse SJLLoops
+        var attributesForDynamicElements = {ctrl: appInstance, app: appInstance};
+        eval ("attributesForDynamicElements."+appName+"=appInstance");
+        eval ("attributesForDynamicElements."+appName+"Instance=appInstance");
+        eval ("attributesForDynamicElements.javascript ={"+appName+": appInstance}");
+        eval ("attributesForDynamicElements."+camelizedAppName+"=appInstance");
+
         this.__processForeachs(function(){
             //autoload child components
             var processeds = 0;
@@ -1360,18 +1366,28 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                     }
                 }, this);
             });
-        });
+        }, attributesForDynamicElements);
 	}, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_, false);
 
     return this;
 });
 
-SJL.extend("__processForeachs", function(onDone){
+SJL.extend("__processForeachs", function(onDone, attributesToElements){
     //get all elements with propety SJLForeach or property SJLForIn
     var SJLFors = this.$(["[sjlforeach]", "[sjlforin]"]);
 
     //gets the elements from each curr element
+    
     SJLFors.do(function(currEl){
+        //the parameter atributesToElements allow loadActivity funciton to set attributes in new elements
+        if (attributesToElements)
+        {
+            for (var tempA in attributesToElements)
+            {
+                eval ("currEl."+tempA+" = attributesToElements."+tempA);
+            }
+        }
+
         //get the attribute value
         var attributeValue = currEl.getAttribute("sjlforeach") || currEl.getAttribute("sjlforin");
         var iteratorName = "i";
@@ -1383,7 +1399,10 @@ SJL.extend("__processForeachs", function(onDone){
         }
 
         //eval the attribute value
-        var value = (function(){return eval(attributeValue);}).call(currEl);
+        var value = "";
+        try{
+            value = (function(){return eval(attributeValue);}).call(currEl);
+        }catch{}
 
         //removes attribute from element (to prevent a new call of foreach for curren element)
         currEl.removeAttribute("sjlforeach");
@@ -1417,20 +1436,29 @@ SJL.extend("__processForeachs", function(onDone){
 
                     var toEval = copy.substr(startPos+2, endPos-(startPos+2));
                     var toReplace = copy.substr(startPos, endPos-startPos+2);
-                    try{
-                        var evalResult = eval(toEval);
+                    var backup = false;
+                    if (toEval.trim().indexOf(iteratorName) > -1)
+                    {
+
+                        try{
+                            var evalResult = (function(){ return eval(toEval)}).call(currEl);
+                        }
+                        catch{
+                            backup = true;
+                        }
                     }
-                    catch{
+                    else
+                        backup = true;
+
+                    if (backup)
+                    {
                         copy = copy.replace("{{", "__backOpen__");
                         copy = copy.replace("}}", "__backClose__");
-                        console.log("replaced: ", copy);
-                        continue
                     }
-
-                    console.log("toEval", toEval);
-                    console.log("toReplace", toReplace);
-                    console.log("evalResult", evalResult);
-                    copy = copy.replace(new RegExp(toReplace, 'g'), evalResult);
+                    else
+                    {
+                        copy = copy.replace(new RegExp(toReplace, 'g'), evalResult);
+                    }
                 }
                 else
                     break;
@@ -1444,10 +1472,9 @@ SJL.extend("__processForeachs", function(onDone){
             tempElement.innerHTML = copy;
             container.appendChild(tempElement);
 
+            $(tempElement).__processForeachs(function(){}, attributesToElements);
+
         }
-        
-        
-        console.log("attributeValue = ", attributeValue, "->", value);
 
     });
     onDone.call(this);
