@@ -1409,14 +1409,7 @@ SJL.extend("__processForeachs", function(onDone, attributesToElements){
         currEl.removeAttribute("sjlforin");
 
         //get currEl as text
-        var elementHtml = currEl.outerHTML;
-
-        //create a container element
-        var container = document.createElement('span');
-        parentOfCurrEl.insertBefore(container, currEl);
-
-        //remove currEl from his parent
-        currEl.parentNode.removeChild(currEl);
+        var elementHtml = currEl.innerHTML;
 
         //scrols through the 'value' items
         for (var valueI in value)
@@ -1468,14 +1461,15 @@ SJL.extend("__processForeachs", function(onDone, attributesToElements){
             copy = copy.replace(new RegExp("__backOpen__", 'g'), "{{").replace(new RegExp("__backClose__", 'g'), '}}');
 
             //add the new html to parent of currEl
-            var tempElement = document.createElement('span');
+            var tempElement = currEl.cloneNode();
             tempElement.innerHTML = copy;
-            container.appendChild(tempElement);
+            parentOfCurrEl.insertBefore(tempElement, currEl);
 
             $(tempElement).__processForeachs(function(){}, attributesToElements);
 
         }
-
+        //remove currEl from his parent
+        currEl.parentNode.removeChild(currEl);
     });
     onDone.call(this);
 })
