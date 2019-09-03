@@ -1348,24 +1348,26 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         eval ("attributesForDynamicElements."+camelizedAppName+"=appInstance");
 
         this.__processForeachs(function(){
-            //autoload child components
-            var processeds = 0;
-            var _this = this;
-            this.do(function(c){
-                this.autoLoadComponents(c, function(){
-                    processeds++;
-                    if (processeds == _this.elements.length)
-                    {
-                        //if there is a event called sjlonload on element, call them
-                        this.callEvent("sjlonload", {sjl: this, instance: appInstance});
-                        this.callEvent("onload", {sjl: this, instance: appInstance});
+            this.__processIfs(function(){
+                //autoload child components
+                var processeds = 0;
+                var _this = this;
+                this.do(function(c){
+                    this.autoLoadComponents(c, function(){
+                        processeds++;
+                        if (processeds == _this.elements.length)
+                        {
+                            //if there is a event called sjlonload on element, call them
+                            this.callEvent("sjlonload", {sjl: this, instance: appInstance});
+                            this.callEvent("onload", {sjl: this, instance: appInstance});
 
-                        onLoad = onLoad || null;
-                        if (onLoad != null)
-                            onLoad.call(_context_ || appSPointer, appInstance, appSPointer, _onLoadArguments_);
-                    }
-                }, this);
-            });
+                            onLoad = onLoad || null;
+                            if (onLoad != null)
+                                onLoad.call(_context_ || appSPointer, appInstance, appSPointer, _onLoadArguments_);
+                        }
+                    }, this);
+                });
+            }, attributesForDynamicElements);
         }, attributesForDynamicElements);
 	}, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_, false);
 
@@ -1398,11 +1400,16 @@ SJL.extend("__processForeachs", function(onDone, attributesToElements){
             attributeValue = attributeValue.substr(attributeValue.indexOf(' in ')+4);
         }
 
+
         //eval the attribute value
         var value = "";
-        try{
+        try {
             value = (function(){return eval(attributeValue);}).call(currEl);
-        }catch{}
+        }
+        catch(e)
+        {
+            //console.error("Error during eval in", attributeValue, e);
+        }
 
         //removes attribute from element (to prevent a new call of foreach for curren element)
         currEl.removeAttribute("sjlforeach");
@@ -1435,9 +1442,15 @@ SJL.extend("__processForeachs", function(onDone, attributesToElements){
 
                         try{
                             var evalResult = (function(){ return eval(toEval)}).call(currEl);
+                            if (typeof (evalResult) == 'undefined' || evalResult == null)
+                            {
+                                //console.error("Invalid eval result during evaluate of ", toEval, ". The result was ", evalResult);
+                                backup = true;
+                            }
                         }
-                        catch{
+                        catch (e){
                             backup = true;
+                            console.error("Error during get eval result of ", toEval, e);
                         }
                     }
                     //else
@@ -1472,7 +1485,46 @@ SJL.extend("__processForeachs", function(onDone, attributesToElements){
         currEl.parentNode.removeChild(currEl);
     });
     onDone.call(this);
-})
+});
+
+SJL.extend("__processIfs", function(onDone, attributesToElements){
+    //get all elements with propety SJLForeach or property SJLForIn
+    var SJLFors = this.$("[sjlif]");
+
+    //gets the elements from each curr element
+    
+    SJLFors.do(function(currEl){
+        //the parameter atributesToElements allow loadActivity funciton to set attributes in new elements
+        if (attributesToElements)
+        {
+            for (var tempA in attributesToElements)
+            {
+                eval ("currEl."+tempA+" = attributesToElements."+tempA);
+            }
+        }
+
+        //get the attribute value
+        var attributeValue = currEl.getAttribute("sjlif");
+        var parentOfCurrEl = currEl.parentNode;
+        
+        //eval the attribute value
+        var value = "";
+        try {
+            value = (function(){return eval(attributeValue);}).call(currEl);
+            if (typeof(value) == 'undefined' || value == null)
+                return;
+
+            if ("1true".indexOf(value + "") <= 0)
+                currEl.parentNode.removeChild(currEl);
+        }
+        catch(e)
+        {
+            console.error("SJLIF: Error during eval in", attributeValue, e);
+        }
+        
+    });
+    onDone.call(this);
+});
 
 /* call atributes like "onDoSomething" */
 //callEvent("onChange", {var:value, var2:value})

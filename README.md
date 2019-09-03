@@ -230,3 +230,15 @@ To delete some resource from server, just call 'delete' function:
 ``` 
 		
 #### generic requests
+
+## HTML Loops
+
+#### Foreach inside a foreach
+``` html
+<div sjlforeach="a in [1, 2, 3, 4, 5, 6, 7, 8, 9]">
+	childs of {{a}}:
+	<div sjlforeach="b in [1, 2, 3, 4, 5, 6, 7, 8, 9]" style="padding-left:15px">
+		Div {{a}}.{{b}}
+	</div>
+</div>
+```
