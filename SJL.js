@@ -926,21 +926,23 @@ SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHt
         var _this = this;
         if (autoLoadComponents_default_true == true)
         {
-            _this.autoLoadComponents(c, function(){
-                processeds++;
-                if (processeds == _this.elements.length)
-                {
-                    if (onLoad != null)
+            _this.__processLoops(function(){
+                _this.autoLoadComponents(c, function(){
+                    processeds++;
+                    if (processeds == _this.elements.length)
                     {
-                        onLoad.call(_context_ || _this, htmlText, _this, _onLoadArguments_);
-                    }
+                        if (onLoad != null)
+                        {
+                            onLoad.call(_context_ || _this, htmlText, _this, _onLoadArguments_);
+                        }
 
-                    if (c.getAttribute("onload") != null)
-                    {
-                        eval(c.getAttribute("onload"));
+                        if (c.getAttribute("onload") != null)
+                        {
+                            eval(c.getAttribute("onload"));
+                        }
                     }
-                }
-            }, this);
+                }, _this);
+            }, null);
         }
         else{
             if (onLoad != null)
@@ -1324,31 +1326,28 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         //}
 
         
+        var continueStart = function(){
 
+            //try call new instance initilizers
+            //{
+                /*if (typeof (appInstance.constructor) != 'undefined')
+                    appInstance.constructor();*/
+                if (typeof (appInstance.initialize) != 'undefined')
+                    appInstance.initialize(appArgumentsArray);
+                if (typeof (appInstance.start) != 'undefined')
+                    appInstance.start(appArgumentsArray);
+                if (typeof (appInstance.create) != 'undefined')
+                    appInstance.create(appArgumentsArray);
+            //}
+            delete fixAppSPointer;
+            //parse SJLLoops
+            var attributesForDynamicElements = {ctrl: appInstance, app: appInstance};
+            eval ("attributesForDynamicElements."+appName+"=appInstance");
+            eval ("attributesForDynamicElements."+appName+"Instance=appInstance");
+            eval ("attributesForDynamicElements.javascript ={"+appName+": appInstance}");
+            eval ("attributesForDynamicElements."+camelizedAppName+"=appInstance");
 
-        //try call new instance initilizers
-        //{
-            /*if (typeof (appInstance.constructor) != 'undefined')
-                appInstance.constructor();*/
-            if (typeof (appInstance.init) != 'undefined')
-                appInstance.init(appArgumentsArray);
-            if (typeof (appInstance.initialize) != 'undefined')
-                appInstance.initialize(appArgumentsArray);
-            if (typeof (appInstance.start) != 'undefined')
-                appInstance.start(appArgumentsArray);
-            if (typeof (appInstance.create) != 'undefined')
-                appInstance.create(appArgumentsArray);
-        //}
-        delete fixAppSPointer;
-        //parse SJLLoops
-        var attributesForDynamicElements = {ctrl: appInstance, app: appInstance};
-        eval ("attributesForDynamicElements."+appName+"=appInstance");
-        eval ("attributesForDynamicElements."+appName+"Instance=appInstance");
-        eval ("attributesForDynamicElements.javascript ={"+appName+": appInstance}");
-        eval ("attributesForDynamicElements."+camelizedAppName+"=appInstance");
-
-        this.__processForeachs(function(){
-            this.__processIfs(function(){
+            this.__processLoops(function(){
                 //autoload child components
                 var processeds = 0;
                 var _this = this;
@@ -1368,10 +1367,24 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                     }, this);
                 });
             }, attributesForDynamicElements);
-        }, attributesForDynamicElements);
+        };
+
+
+        var _this = this;
+        if (typeof (appInstance.init) != 'undefined')
+            appInstance.init(function(){continueStart.call(_this);}, appArgumentsArray);
+        else
+            continueStart.call(this);
+
 	}, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_, false);
 
     return this;
+});
+
+SJL.extend("__processLoops", function(onDone, attributesToElements){
+    this.__processForeachs(function(){
+		this.__processIfs(onDone, attributesToElements);
+	}, attributesToElements);
 });
 
 SJL.extend("__processForeachs", function(onDone, attributesToElements){
@@ -1416,70 +1429,75 @@ SJL.extend("__processForeachs", function(onDone, attributesToElements){
         currEl.removeAttribute("sjlforin");
 
         //get currEl as text
-        var elementHtml = currEl.innerHTML;
+        var elementHtml = currEl.outerHTML;
 
         //scrols through the 'value' items
+        var index = -1;
         for (var valueI in value)
         {
+            index ++;
             var currValue = value[valueI];
             eval("var "+iteratorName + " = currValue");
+            
             //take a copy of the text
             var copy = elementHtml;
 
             //replace values
             while (true){
-                //backup foreach inside elements
+                try{
+                    //backup foreach inside elements
+                    var startPos = copy.indexOf("{{");
+                    if (startPos > -1){
+                        var endPos = copy.indexOf("}}");
 
-                var startPos = copy.indexOf("{{");
-                if (startPos > -1){
-                    var endPos = copy.indexOf("}}");
-
-                    var toEval = copy.substr(startPos+2, endPos-(startPos+2));
-                    var toReplace = copy.substr(startPos, endPos-startPos+2);
-                    var backup = false;
-                    //if (toEval.trim().indexOf(iteratorName) > -1)
-                    {
-
-                        try{
-                            var evalResult = (function(){ return eval(toEval)}).call(currEl);
-                            if (typeof (evalResult) == 'undefined' || evalResult == null)
-                            {
-                                //console.error("Invalid eval result during evaluate of ", toEval, ". The result was ", evalResult);
+                        var toEval = copy.substr(startPos+2, endPos-(startPos+2));
+                        var toReplace = copy.substr(startPos, endPos-startPos+2);
+                        var backup = false;
+                        //if (toEval.trim().indexOf(iteratorName) > -1)
+                        {
+                            try{
+                                var evalResult = (function(){ return eval(toEval)}).call(currEl);
+                                if (typeof (evalResult) == 'undefined' || evalResult == null)
+                                    backup = true;
+                            }
+                            catch (e){
                                 backup = true;
                             }
                         }
-                        catch (e){
-                            backup = true;
-                            console.error("Error during get eval result of ", toEval, e);
+                        //else
+                        //    backup = true;
+
+
+                        if (backup)
+                        {
+                            copy = copy.replace("{{", "__backOpen__");
+                            copy = copy.replace("}}", "__backClose__");
+                        }
+                        else
+                        {
+                            copy = copy.replace(new RegExp(toReplace, 'g'), evalResult);
+
                         }
                     }
-                    //else
-                    //    backup = true;
-
-                    if (backup)
-                    {
-                        copy = copy.replace("{{", "__backOpen__");
-                        copy = copy.replace("}}", "__backClose__");
-                    }
                     else
-                    {
-                        copy = copy.replace(new RegExp(toReplace, 'g'), evalResult);
-                    }
+                        break;
                 }
-                else
+                catch(e)
+                {
+                    console.error("SJLForEach error: ", e);
                     break;
+                }
             }
 
             //restore [[ and ]]
             copy = copy.replace(new RegExp("__backOpen__", 'g'), "{{").replace(new RegExp("__backClose__", 'g'), '}}');
 
             //add the new html to parent of currEl
-            var tempElement = currEl.cloneNode();
+            var tempElement = document.createElement("span");
             tempElement.innerHTML = copy;
-            parentOfCurrEl.insertBefore(tempElement, currEl);
+            parentOfCurrEl.insertBefore(tempElement.childNodes[0], currEl);
 
-            $(tempElement).__processForeachs(function(){}, attributesToElements);
-
+            $(tempElement).__processLoops(function(){}, attributesToElements);
         }
         //remove currEl from his parent
         currEl.parentNode.removeChild(currEl);
