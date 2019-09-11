@@ -1222,17 +1222,18 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         //value by parameter
         //{
             SJL.__AttributeChanged = function(element, attribute, newValue){
-                var appInstancesMethods = element.appInstanceMethods;
+
                 var destinationInstance = element.SJL_CurrAPP;
-                eval("destinationInstance."+attribute +" = newValue");
+                
+                if (attribute == "active")
+                    eval("destinationInstance."+attribute +" = newValue");
 
                 var setName = "set" + attribute[0].toUpperCase() + (attribute.length > 1 ? attribute.substring(1) : "");
-				for (var currProp in appInstancesMethods)
-				{
-					var currMethod = appInstancesMethods[currProp];
-                    if (currMethod.toLowerCase() == setName.toLowerCase())
-                        destinationInstance[currMethod].call(destinationInstance, newValue, element);
-                };
+                
+                eval (`if (typeof(destinationInstance.${setName}) == 'function'){
+                    destinationInstance.${setName}.call(destinationInstance, newValue, element)
+                }`);
+				
             }
 
             //hooks setAttribute and getAttribute  methods of elements
@@ -1281,6 +1282,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                 for (var cAttribute = 0; cAttribute < attributes.length; cAttribute++)
                 {
                     var currAttribute = attributes[cAttribute];
+                    
                     SJL.__AttributeChanged.call(window, curr, currAttribute.name, currAttribute.value);
                 }
 
