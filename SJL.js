@@ -89,7 +89,6 @@
 
         this.go = function(activityName, args){
             var argsStr = "";
-            console.log(arguments[0][0]);
             if (arguments[0][0] != '#')
                 argsStr = "#";
                 
@@ -1372,6 +1371,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                 var processeds = 0;
                 var _this = this;
                 this.do(function(c){
+                    
                     this.autoLoadComponents(c, function(){
                         processeds++;
                         if (processeds == _this.elements.length)
@@ -1397,39 +1397,38 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
             continueStart.call(this);
 
 	}, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_, false);
-
     return this;
 });
 
 SJL.extend("__processLoops", function(onDone, attributesToElements){
-
+    
     var elem = this.$("*");
     var waiting = 0;
     var _this = this;
     var waitingCheck = function (){
-        console.log(waiting);
         waiting--;
+        console.log(waiting);
         if (waiting <= 0)
+        {
             onDone.call(_this);
+            onDone = function(){};
+        }
     }
-
 
     elem.do(function(currEl){
         if (currEl.getAttribute("sjlforeach") || currEl.getAttribute("sjlforin"))
         {
-            waiting++;
-            _this.__processForeach(currEl, function(){waitingCheck();}, attributesToElements);
+            _this.__processForeach(currEl, function(){}, attributesToElements);
         }
         else if (currEl.getAttribute("sjlif"))
         {
-            waiting++;
-            _this.__processIf(currEl, function(){waitingCheck();}, attributesToElements);
+            _this.__processIf(currEl, function(){}, attributesToElements);
         }
+
 
     });
 
-    if (waiting == 0)
-        onDone.call(this);
+    onDone.call(this);
 });
 
 SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
@@ -1534,17 +1533,17 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
         copy = copy.replace(new RegExp("__backOpen__", 'g'), "{{").replace(new RegExp("__backClose__", 'g'), '}}');
         //add the new html to parent of currEl
         var tempElement = currEl.cloneNode();
+
         tempElement.innerHTML = copy;
         globalParent = parentOfCurrEl;
         parentOfCurrEl.insertBefore(tempElement, currEl);
-        console.log($(tempElement));
         $(tempElement).__processLoops(function(){}, attributesToElements);
 
     
         
     }
-    //remove currEl from his parent
     currEl.parentNode.removeChild(currEl);
+    //remove currEl from his parent
     onDone.call(this);
 });
 
