@@ -785,6 +785,22 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                 
                 if ((active != "none") && (active != "") && (active != "false"))
                 {
+                    //checking for parameters
+                    var parameters = [];
+                    if (componentName.indexOf(',') > 0)
+                    {
+                        parameters = componentName.substr(componentName.indexOf(',')+1).split(',');
+                        componentName = componentName.substr(0, componentName.indexOf(','));
+                        for (var c = 0; c < parameters.length; c++)
+                        {
+                            var tmp = parameters[c].trim();
+                            if (tmp.indexOf('{{') == 0)
+                            {
+                                parameters[c] = (function(){return eval(tmp.substr(2, tmp.length-4));}).call(currElement);
+                            }
+                        }
+                        
+                    }
                     //active instance
                     $(currElement, true).loadActiveComponent(componentName, function(newInstance){
                         waitings++;
@@ -800,7 +816,7 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                             if (onDone)
                                 onDone.call(_context_ || _this);
                         }
-                    });
+                    }, parameters);
                 }
                 else
                 {
@@ -1230,9 +1246,10 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 
                 var setName = "set" + attribute[0].toUpperCase() + (attribute.length > 1 ? attribute.substring(1) : "");
                 
-                eval (`if (typeof(destinationInstance.${setName}) == 'function'){
-                    destinationInstance.${setName}.call(destinationInstance, newValue, element)
-                }`);
+                
+                eval ("if (typeof(destinationInstance."+setName+") == 'function'){"+
+                    "destinationInstance."+setName+".call(destinationInstance, newValue, element)"+
+                "}");
 				
             }
 
@@ -1330,17 +1347,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         
         var continueStart = function(){
 
-            //try call new instance initilizers
-            //{
-                /*if (typeof (appInstance.constructor) != 'undefined')
-                    appInstance.constructor();*/
-                if (typeof (appInstance.initialize) != 'undefined')
-                    appInstance.initialize(appArgumentsArray);
-                if (typeof (appInstance.start) != 'undefined')
-                    appInstance.start(appArgumentsArray);
-                if (typeof (appInstance.create) != 'undefined')
-                    appInstance.create(appArgumentsArray);
-            //}
+            
             delete fixAppSPointer;
             //parse SJLLoops
             var attributesForDynamicElements = {ctrl: appInstance, app: appInstance};
@@ -1350,6 +1357,17 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
             eval ("attributesForDynamicElements."+camelizedAppName+"=appInstance");
 
             this.__processLoops(function(){
+                //try call new instance initilizers
+                //{
+                    /*if (typeof (appInstance.constructor) != 'undefined')
+                    appInstance.constructor();*/
+                    if (typeof (appInstance.initialize) != 'undefined')
+                        appInstance.initialize(appArgumentsArray);
+                    if (typeof (appInstance.start) != 'undefined')
+                        appInstance.start(appArgumentsArray);
+                    if (typeof (appInstance.create) != 'undefined')
+                        appInstance.create(appArgumentsArray);
+                //}
                 //autoload child components
                 var processeds = 0;
                 var _this = this;
@@ -1431,75 +1449,70 @@ SJL.extend("__processForeachs", function(onDone, attributesToElements){
         currEl.removeAttribute("sjlforin");
 
         //get currEl as text
-        var elementHtml = currEl.outerHTML;
+        var elementHtml = currEl.innerHTML;
 
         //scrols through the 'value' items
-        var index = -1;
         for (var valueI in value)
         {
-            index ++;
             var currValue = value[valueI];
             eval("var "+iteratorName + " = currValue");
-            
             //take a copy of the text
             var copy = elementHtml;
 
             //replace values
             while (true){
-                try{
-                    //backup foreach inside elements
-                    var startPos = copy.indexOf("{{");
-                    if (startPos > -1){
-                        var endPos = copy.indexOf("}}");
+                //backup foreach inside elements
 
-                        var toEval = copy.substr(startPos+2, endPos-(startPos+2));
-                        var toReplace = copy.substr(startPos, endPos-startPos+2);
-                        var backup = false;
-                        //if (toEval.trim().indexOf(iteratorName) > -1)
-                        {
-                            try{
-                                var evalResult = (function(){ return eval(toEval)}).call(currEl);
-                                if (typeof (evalResult) == 'undefined' || evalResult == null)
-                                    backup = true;
-                            }
-                            catch (e){
+                var startPos = copy.indexOf("{{");
+                if (startPos > -1){
+                    var endPos = copy.indexOf("}}");
+
+                    var toEval = copy.substr(startPos+2, endPos-(startPos+2));
+                    var toReplace = copy.substr(startPos, endPos-startPos+2);
+                    var backup = false;
+                    //if (toEval.trim().indexOf(iteratorName) > -1)
+                    {
+
+                        try{
+                            var evalResult = (function(){ return eval(toEval)}).call(currEl);
+                            if (typeof (evalResult) == 'undefined' || evalResult == null)
+                            {
+                                //console.error("Invalid eval result during evaluate of ", toEval, ". The result was ", evalResult);
                                 backup = true;
                             }
                         }
-                        //else
-                        //    backup = true;
-
-
-                        if (backup)
-                        {
-                            copy = copy.replace("{{", "__backOpen__");
-                            copy = copy.replace("}}", "__backClose__");
-                        }
-                        else
-                        {
-                            copy = copy.replace(new RegExp(toReplace, 'g'), evalResult);
-
+                        catch (e){
+                            backup = true;
+                            console.error("Error during get eval result of ", toEval, e);
                         }
                     }
+                    //else
+                    //    backup = true;
+
+                    if (backup)
+                    {
+                        copy = copy.replace("{{", "__backOpen__");
+                        copy = copy.replace("}}", "__backClose__");
+                    }
                     else
-                        break;
+                    {
+                        copy = copy.replace(new RegExp(toReplace, 'g'), evalResult);
+                    }
                 }
-                catch(e)
-                {
-                    console.error("SJLForEach error: ", e);
+                else
                     break;
-                }
             }
 
             //restore [[ and ]]
             copy = copy.replace(new RegExp("__backOpen__", 'g'), "{{").replace(new RegExp("__backClose__", 'g'), '}}');
 
             //add the new html to parent of currEl
-            var tempElement = document.createElement("span");
+            var tempElement = currEl.cloneNode();
             tempElement.innerHTML = copy;
-            parentOfCurrEl.insertBefore(tempElement.childNodes[0], currEl);
+            parentOfCurrEl.insertBefore(tempElement, currEl);
 
-            $(tempElement).__processLoops(function(){}, attributesToElements);
+            $(tempElement).__processForeachs(function(){}, attributesToElements);
+
         }
         //remove currEl from his parent
         currEl.parentNode.removeChild(currEl);
