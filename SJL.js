@@ -1347,7 +1347,9 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
             eval ("attributesForDynamicElements.javascript ={"+appName+": appInstance}");
             eval ("attributesForDynamicElements."+camelizedAppName+"=appInstance");
 
+            console.log('p1');
             this.__processLoops(function(){
+                console.log('p2');
                 //autoload child components
                 var processeds = 0;
                 var _this = this;
@@ -1382,165 +1384,179 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 });
 
 SJL.extend("__processLoops", function(onDone, attributesToElements){
-    this.__processForeachs(function(){
-		this.__processIfs(onDone, attributesToElements);
-	}, attributesToElements);
+
+    var elem = this.$("*");
+    var waiting = 0;
+    var _this = this;
+    var waitingCheck = function (){
+        console.log(waiting);
+        waiting--;
+        if (waiting <= 0)
+            onDone.call(_this);
+    }
+
+
+    elem.do(function(currEl){
+        if (currEl.getAttribute("sjlforeach") || currEl.getAttribute("sjlforin"))
+        {
+            waiting++;
+            _this.__processForeach(currEl, function(){waitingCheck();}, attributesToElements);
+        }
+        else if (currEl.getAttribute("sjlif"))
+        {
+            waiting++;
+            _this.__processIf(currEl, function(){waitingCheck();}, attributesToElements);
+        }
+
+    });
+
+    if (waiting == 0)
+        onDone.call(this);
 });
 
-SJL.extend("__processForeachs", function(onDone, attributesToElements){
+SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
     //get all elements with propety SJLForeach or property SJLForIn
     var SJLFors = this.$(["[sjlforeach]", "[sjlforin]"]);
 
     //gets the elements from each curr element
     
-    SJLFors.do(function(currEl){
-        //the parameter atributesToElements allow loadActivity funciton to set attributes in new elements
-        if (attributesToElements)
+    if (attributesToElements)
+    {
+        for (var tempA in attributesToElements)
         {
-            for (var tempA in attributesToElements)
-            {
-                eval ("currEl."+tempA+" = attributesToElements."+tempA);
-            }
+            eval ("currEl."+tempA+" = attributesToElements."+tempA);
         }
+    }
 
-        //get the attribute value
-        var attributeValue = currEl.getAttribute("sjlforeach") || currEl.getAttribute("sjlforin");
-        var iteratorName = "i";
-        var parentOfCurrEl = currEl.parentNode;
-        if (attributeValue.split(' ')[1] == 'in')
-        {
-            iteratorName = attributeValue.split(' ')[0];
-            attributeValue = attributeValue.substr(attributeValue.indexOf(' in ')+4);
-        }
+    //get the attribute value
+    var attributeValue = currEl.getAttribute("sjlforeach") || currEl.getAttribute("sjlforin");
+    var iteratorName = "i";
+    var parentOfCurrEl = currEl.parentNode;
+    if (attributeValue.split(' ')[1] == 'in')
+    {
+        iteratorName = attributeValue.split(' ')[0];
+        attributeValue = attributeValue.substr(attributeValue.indexOf(' in ')+4);
+    }
 
 
-        //eval the attribute value
-        var value = "";
-        try {
-            value = (function(){return eval(attributeValue);}).call(currEl);
-        }
-        catch(e)
-        {
-            //console.error("Error during eval in", attributeValue, e);
-        }
+    //eval the attribute value
+    var value = "";
+    try {
+        value = (function(){return eval(attributeValue);}).call(currEl);
+    }
+    catch(e)
+    {
+        //console.error("Error during eval in", attributeValue, e);
+    }
 
-        //removes attribute from element (to prevent a new call of foreach for curren element)
-        currEl.removeAttribute("sjlforeach");
-        currEl.removeAttribute("sjlforin");
+    //removes attribute from element (to prevent a new call of foreach for curren element)
+    currEl.removeAttribute("sjlforeach");
+    currEl.removeAttribute("sjlforin");
 
-        //get currEl as text
-        var elementHtml = currEl.outerHTML;
+    //get currEl as text
+    var elementHtml = currEl.outerHTML;
 
-        //scrols through the 'value' items
-        var index = -1;
-        for (var valueI in value)
-        {
-            index ++;
-            var currValue = value[valueI];
-            eval("var "+iteratorName + " = currValue");
-            
-            //take a copy of the text
-            var copy = elementHtml;
+    //scrols through the 'value' items
+    var index = -1;
+    for (var valueI in value)
+    {
+        index ++;
+        var currValue = value[valueI];
+        eval("var "+iteratorName + " = currValue");
+        
+        //take a copy of the text
+        var copy = elementHtml;
 
-            //replace values
-            while (true){
-                try{
-                    //backup foreach inside elements
-                    var startPos = copy.indexOf("{{");
-                    if (startPos > -1){
-                        var endPos = copy.indexOf("}}");
+        //replace values
+        while (true){
+            try{
+                //backup foreach inside elements
+                var startPos = copy.indexOf("{{");
+                if (startPos > -1){
+                    var endPos = copy.indexOf("}}");
 
-                        var toEval = copy.substr(startPos+2, endPos-(startPos+2));
-                        var toReplace = copy.substr(startPos, endPos-startPos+2);
-                        var backup = false;
-                        //if (toEval.trim().indexOf(iteratorName) > -1)
-                        {
-                            try{
-                                var evalResult = (function(){ return eval(toEval)}).call(currEl);
-                                if (typeof (evalResult) == 'undefined' || evalResult == null)
-                                    backup = true;
-                            }
-                            catch (e){
+                    var toEval = copy.substr(startPos+2, endPos-(startPos+2));
+                    var toReplace = copy.substr(startPos, endPos-startPos+2);
+                    var backup = false;
+                    //if (toEval.trim().indexOf(iteratorName) > -1)
+                    {
+                        try{
+                            var evalResult = (function(){ return eval(toEval)}).call(currEl);
+                            if (typeof (evalResult) == 'undefined' || evalResult == null)
                                 backup = true;
-                            }
                         }
-                        //else
-                        //    backup = true;
-
-
-                        if (backup)
-                        {
-                            copy = copy.replace("{{", "__backOpen__");
-                            copy = copy.replace("}}", "__backClose__");
-                        }
-                        else
-                        {
-                            copy = copy.replace(new RegExp(toReplace, 'g'), evalResult);
-
+                        catch (e){
+                            backup = true;
                         }
                     }
+                    //else
+                    //    backup = true;
+
+
+                    if (backup)
+                    {
+                        copy = copy.replace("{{", "__backOpen__");
+                        copy = copy.replace("}}", "__backClose__");
+                    }
                     else
-                        break;
+                    {
+                        copy = copy.replace(new RegExp(toReplace, 'g'), evalResult);
+
+                    }
                 }
-                catch(e)
-                {
-                    console.error("SJLForEach error: ", e);
+                else
                     break;
-                }
             }
-
-            //restore [[ and ]]
-            copy = copy.replace(new RegExp("__backOpen__", 'g'), "{{").replace(new RegExp("__backClose__", 'g'), '}}');
-
-            //add the new html to parent of currEl
-            var tempElement = document.createElement("span");
-            tempElement.innerHTML = copy;
-            parentOfCurrEl.insertBefore(tempElement.childNodes[0], currEl);
-
-            $(tempElement).__processLoops(function(){}, attributesToElements);
+            catch(e)
+            {
+                console.error("SJLForEach error: ", e);
+                break;
+            }
         }
-        //remove currEl from his parent
-        currEl.parentNode.removeChild(currEl);
-    });
+
+        //restore [[ and ]]
+        copy = copy.replace(new RegExp("__backOpen__", 'g'), "{{").replace(new RegExp("__backClose__", 'g'), '}}');
+
+        //add the new html to parent of currEl
+        var tempElement = document.createElement("span");
+        tempElement.innerHTML = copy;
+        parentOfCurrEl.insertBefore(tempElement.childNodes[0], currEl);
+
+        $(tempElement).__processLoops(function(){}, attributesToElements);
+    }
+    //remove currEl from his parent
+    currEl.parentNode.removeChild(currEl);
     onDone.call(this);
 });
 
-SJL.extend("__processIfs", function(onDone, attributesToElements){
-    //get all elements with propety SJLForeach or property SJLForIn
-    var SJLFors = this.$("[sjlif]");
+SJL.extend("__processIf", function(currEl, onDone, attributesToElements){
+    //the parameter atributesToElements allow loadActivity funciton to set attributes in new elements
+    if (attributesToElements)
+    {
+        for (var tempA in attributesToElements)
+        {
+            eval ("currEl."+tempA+" = attributesToElements."+tempA);
+        }
+    }
 
-    //gets the elements from each curr element
+    //get the attribute value
+    var attributeValue = currEl.getAttribute("sjlif");
+    var parentOfCurrEl = currEl.parentNode;
     
-    SJLFors.do(function(currEl){
-        //the parameter atributesToElements allow loadActivity funciton to set attributes in new elements
-        if (attributesToElements)
-        {
-            for (var tempA in attributesToElements)
-            {
-                eval ("currEl."+tempA+" = attributesToElements."+tempA);
-            }
-        }
+    //eval the attribute value
+    var value = "";
+    try {
+        value = (function(){return eval(attributeValue);}).call(currEl);
+        if (typeof(value) == 'undefined' || value == null)
+            return;
 
-        //get the attribute value
-        var attributeValue = currEl.getAttribute("sjlif");
-        var parentOfCurrEl = currEl.parentNode;
-        
-        //eval the attribute value
-        var value = "";
-        try {
-            value = (function(){return eval(attributeValue);}).call(currEl);
-            if (typeof(value) == 'undefined' || value == null)
-                return;
-
-            if ("1true".indexOf(value + "") <= 0)
-                currEl.parentNode.removeChild(currEl);
-        }
-        catch(e)
-        {
-            console.error("SJLIF: Error during eval in", attributeValue, e);
-        }
-        
-    });
+        if ("1true".indexOf(value + "") <= 0)
+            currEl.parentNode.removeChild(currEl);
+    }
+    catch(e)
+    {
+        console.error("SJLIF: Error during eval in", attributeValue, e);
+    }
     onDone.call(this);
 });
 
