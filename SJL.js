@@ -269,8 +269,7 @@ SJL.extend("show", function(){
 @param {int} milisseconds - The time of the animations (in milisseconds)
 @param {Function} callback - The callback to be executed with current value
 @param {Function} endCallback - The callback to be executed when the animation is done
-@param {object} _pointers_ - The optional params to be passed to callback and endCallback
-*/
+@param {object} _pointers_ - The optional params to be passed to callback and endCallback */
 _SJL._minAnimationFrameTime = 15;// 15 ~= 66 frames/second. Its is used when browser does't support window.requestAnimationFrame;
 SJL.extend(["animate", "ani"],  function (from, to, milisseconds, callback, endCallback, _pointers_, _minFrameTime_, __data__) {
     //ons first run (__data__ is private like), create a object for __data__ with the all data necessary to make the
