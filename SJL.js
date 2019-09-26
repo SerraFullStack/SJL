@@ -299,14 +299,27 @@ SJL.extend("setValue", function (data, autoLoadComponents_default_false) {
                 curr.value = data;
         }
         else {
-            if (data.constructor === Array) {
-                curr.innerHTML = data[c];
+            var app = this.elements[0].SJL_CurrAPP;
+
+            var continueProcess = function(curr2){
+                if (data.constructor === Array) {
+                    curr2.innerHTML = data[c];
+                }
+                else
+                    curr2.innerHTML = data;
+
+                if (autoLoadComponents_default_false)
+                    this.autoLoadComponents(this.elements[c], function(){});
+            };
+
+            if ((curr.hasOwnProperty("SJL_CurrAPP") && curr.SJL_CurrAPP != null))
+            {
+                this.unloadActivity(function(curr3){
+                    continueProcess.call(this, curr3);
+                }, this, curr);
             }
             else
-                curr.innerHTML = data;
-
-			if (autoLoadComponents_default_false)
-				this.autoLoadComponents(this.elements[c], function(){});
+                continueProcess.call(this, curr);
         }
     }
 
@@ -1044,6 +1057,49 @@ SJL.extend(["preloadHtml", "preload"], function (htmlFileName, onDone, _context_
 });*/
 
 
+SJL.extend(["unloadApp", "unloadActivity", "unloadActiveComponent"], function (onUnload, _context_, _args_) {
+    var app = this.elements[0].SJL_CurrAPP;
+    var elementP = this.elements[0];
+    var _this = this;
+    _args_ = _args_ || null;
+        
+    if (app != null)
+    {
+        if (typeof(app.destructor) != 'undefined')
+            app.destructor();
+        if (typeof(app.stop) != 'undefined')
+            app.stop();
+        if (typeof(app.release) != 'undefined')
+            app.release();
+        if (typeof(app.free) != 'undefined')
+            app.free();
+        if (typeof(app.destroy) != 'undefined')
+            app.destroy();
+
+        //dispose needs thats a callback is called to continue
+        if (typeof(app.dispose) != 'undefined') //(app.hasOwnProperty("dispose"))
+        {
+            var _this = this;
+            app.dispose(function(){
+                elementP.SJL_CurrAPP = null;
+                delete elementP.SJL_CurrAPP
+                onUnload.call(_context_ || _this, _args_);
+            });
+        }
+        else
+        {
+            elementP.SJL_CurrAPP = null;
+            delete elementP.SJL_CurrAPP
+            onUnload.call(_context_ || this, _args_);
+        }
+    }
+    else
+    {   
+        elementP.SJL_CurrAPP = null;
+        delete elementP.SJL_CurrAPP
+        onUnload.call(_context_ || this, _args_);
+    }
+});
 /** This method load an html named [appName].html and automaticaly instanciate an javascript class named [appName].
  * Is very similiar to loadComponent, but with de advantage of auto instanciate the class.
  */
@@ -1051,37 +1107,11 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 	//checks by old running app and notify them	
 	if ((this.elements[0].hasOwnProperty("SJL_CurrAPP") && this.elements[0].SJL_CurrAPP != null))
 	{
-        var app = this.elements[0].SJL_CurrAPP;
-        var elementP = this.elements[0];
-        var _this = this;
-        
-        if (app != null)
-        {
-            if (typeof(app.destructor) != 'undefined')
-                app.destructor();
-            if (typeof(app.stop) != 'undefined')
-                app.stop();
-            if (typeof(app.release) != 'undefined')
-                app.release();
-            if (typeof(app.free) != 'undefined')
-                app.free();
-            if (typeof(app.destroy) != 'undefined')
-                app.destroy();
-
-            //dispose needs thats a callback is called to continue
-            if (typeof(app.dispose) != 'undefined') //(app.hasOwnProperty("dispose"))
-            {
-                var _this = this;
-                app.dispose(function(){
-                    elementP.SJL_CurrAPP = null;
-                    _this.loadApp(appName, onLoad, appArgumentsArray, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
-
-                });
-                return;
-            }
-
-        }
-    };
+        this.unloadApp(function(){
+            this.loadApp(appName, onLoad, appArgumentsArray, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
+        }, this);
+        return;
+    }
     
     var elementsBackup = this.elements;
     var appSPointer = this;
