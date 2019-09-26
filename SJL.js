@@ -665,6 +665,38 @@ SJL.extend(["include", "loadScript", "script", "require", "import"], function (s
 //#endregion
 
 //#region loading html and activities
+SJL.extend("_parseAcNameAndArgsAndLoad", function(element, string_to_parse, onDone, _context_){
+    //checking for parameters
+    var parameters = [];
+    if (string_to_parse.indexOf(',') > 0)
+    {
+        parameters = string_to_parse.substr(string_to_parse.indexOf(',')+1).split(',');
+        string_to_parse = string_to_parse.substr(0, string_to_parse.indexOf(','));
+        for (var c = 0; c < parameters.length; c++)
+        {
+            var tmp = parameters[c].trim();
+            if (tmp.indexOf('{{') == 0)
+            {
+                parameters[c] = (function(){return eval(tmp.substr(2, tmp.length-4));}).call(element);
+            }
+        }
+        
+    }
+    //active instance
+    var _this = this;
+    $(element, true).loadActivity(string_to_parse, function(newInstance){
+
+        //app and SJL_CurrAPP has are same value
+        newInstance.controlledElement.app = newInstance;
+        newInstance.controlledElement.instance = newInstance;
+        newInstance.controlledElement.appInstance = newInstance;
+        newInstance.controlledElement.classInstance = newInstance;
+        newInstance.controlledElement.activeInstance = newInstance;
+        if (onDone)
+            onDone.call(_context_ || _this);
+    }, parameters);
+})
+
 /** this method load an additional html. Scripts and Styles are automatically parsed and moved to header*/
 SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, onDone, _context_) {
     //scrolls through all subelements and, for elements that have "SJLload"  attribute, try auto load
@@ -713,38 +745,15 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                 
                 if ((active != "none") && (active != "") && (active != "false"))
                 {
-                    //checking for parameters
-                    var parameters = [];
-                    if (componentName.indexOf(',') > 0)
-                    {
-                        parameters = componentName.substr(componentName.indexOf(',')+1).split(',');
-                        componentName = componentName.substr(0, componentName.indexOf(','));
-                        for (var c = 0; c < parameters.length; c++)
-                        {
-                            var tmp = parameters[c].trim();
-                            if (tmp.indexOf('{{') == 0)
-                            {
-                                parameters[c] = (function(){return eval(tmp.substr(2, tmp.length-4));}).call(currElement);
-                            }
-                        }
-                        
-                    }
-                    //active instance
-                    $(currElement, true).loadActiveComponent(componentName, function(newInstance){
-                        waitings++;
-
-                        //app and SJL_CurrAPP has are same value
-                        newInstance.controlledElement.app = newInstance;
-                        newInstance.controlledElement.instance = newInstance;
-                        newInstance.controlledElement.appInstance = newInstance;
-                        newInstance.controlledElement.classInstance = newInstance;
-                        newInstance.controlledElement.activeInstance = newInstance;
+                    waitings++;
+                    this._parseAcNameAndArgsAndLoad(currElement, componentName, function(){
                         if (waitings == length)
                         {
                             if (onDone)
                                 onDone.call(_context_ || _this);
                         }
-                    }, parameters);
+                     }, _context_);
+                    
                 }
                 else
                 {
@@ -1269,29 +1278,37 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                         if (value != curr.getAttribute(name)){
                             this.__setAttribute(name, value);
 
-                            if (typeof(__dispatchActivityEvents__) == 'undefined')
-                                __dispatchActivityEvents__ = true;
-
-                            if (__dispatchActivityEvents__ != false)
+                            //check if user is trying to change SJL attributes
+                            if (name.toLowerCase() == "sjlload")
                             {
-                                /*  When an  activitiy is loaded (see the beginning of this method), the searches 
-                                looks the root element for any html content. If something is found, SJL move that
-                                content  to an attribute called "content". This attribute is sent to class of the
-                                new activity in a for loop that is implemented bellow (out of current if). 
-                                
-                                    But  there  is  one  thing  that  should  be  considered  here  (before  call
-                                __AttributeChanged). __AttributeChanged uses the property 'SJL_CurrAPP', which is
-                                a  reference  to class instance of new activity. When this 'content' attribute is
-                                created  in  the root element (with its HTML content), the 'SJL_CurrAPP' property
-                                (also   of   root   element)   is   not  yet  exists,  raising  an  exception  in
-                                __AttributeChanged   event.  Therefore,  it  is  necessary  to  verify  that  the
-                                'SJL_CurrAPP'  property  already  exists in the 'curr' element before calling SJL
-                                method '__AttributeChanged'.*/
-                                try{
-                                    if (this.SJL_CurrAPP)
-                                        SJL.__AttributeChanged(this, name, value);
-                                }catch (e) {
-                                    console.log("Error setting attribute ", name, " with value ", value, " to element ", this, ":", e);
+                                //load a new activity
+                                SJL._parseAcNameAndArgsAndLoad(this, value, function(){}, this);
+                            }
+                            else{
+                                if (typeof(__dispatchActivityEvents__) == 'undefined')
+                                    __dispatchActivityEvents__ = true;
+
+                                if (__dispatchActivityEvents__ != false)
+                                {
+                                    /*  When an  activitiy is loaded (see the beginning of this method), the searches 
+                                    looks the root element for any html content. If something is found, SJL move that
+                                    content  to an attribute called "content". This attribute is sent to class of the
+                                    new activity in a for loop that is implemented bellow (out of current if). 
+                                    
+                                        But  there  is  one  thing  that  should  be  considered  here  (before  call
+                                    __AttributeChanged). __AttributeChanged uses the property 'SJL_CurrAPP', which is
+                                    a  reference  to class instance of new activity. When this 'content' attribute is
+                                    created  in  the root element (with its HTML content), the 'SJL_CurrAPP' property
+                                    (also   of   root   element)   is   not  yet  exists,  raising  an  exception  in
+                                    __AttributeChanged   event.  Therefore,  it  is  necessary  to  verify  that  the
+                                    'SJL_CurrAPP'  property  already  exists in the 'curr' element before calling SJL
+                                    method '__AttributeChanged'.*/
+                                    try{
+                                        if (this.SJL_CurrAPP)
+                                            SJL.__AttributeChanged(this, name, value);
+                                    }catch (e) {
+                                        console.log("Error setting attribute ", name, " with value ", value, " to element ", this, ":", e);
+                                    }
                                 }
                             }
                         }
