@@ -1,3 +1,4 @@
+//#region initial SJL declaration
 //(function(){
 
     _SJL = function(elementList)
@@ -229,33 +230,9 @@
     //default SJL instance
     SJL = new _SJL();
 //})();
+//#endregion
 
-SJL.extend(["clearObject", "clear"], function(object, _currStack_size_){
-	object = object || this;
-	_currStack_size_ = _currStack_size_ || 1;
-	
-	if (_currStack_size_ >= 3)
-		return;
-	
-	for (var c in object)
-	{
-		if (object[c] instanceof Object)
-			this.clearObject(object[c], (parseInt(_currStack_size_)+1));
-		
-		if (object[c] instanceof Array)
-		{
-			while (object[c].length > 0)
-				object[c].pop();
-			
-			object[c].length = 0;
-		}
-		
-		//object[c] = null;
-		delete object[c];
-		
-	}
-});
-
+//#region animations and show and hide functions
 SJL.extend("hide", function(){
     for (var c in this.elements)
     {
@@ -283,66 +260,6 @@ SJL.extend("show", function(){
     }
 
     return this;
-});
-
-/** Sets the value or */
-SJL.extend("setValue", function (data, autoLoadComponents_default_false) {
-	autoLoadComponents_default_false = autoLoadComponents_default_false || false;
-    for (var c in this.elements)
-    {
-        var curr = this.elements[c];
-
-        if (typeof(curr.value) != 'undefined') {
-            if (data.constructor === Array)
-                curr.value = data[c];
-            else
-                curr.value = data;
-        }
-        else {
-            var app = this.elements[0].SJL_CurrAPP;
-
-            var continueProcess = function(curr2){
-                if (data.constructor === Array) {
-                    curr2.innerHTML = data[c];
-                }
-                else
-                    curr2.innerHTML = data;
-
-                if (autoLoadComponents_default_false)
-                    this.autoLoadComponents(this.elements[c], function(){});
-            };
-
-            if ((curr.hasOwnProperty("SJL_CurrAPP") && curr.SJL_CurrAPP != null))
-            {
-                this.unloadActivity(function(curr3){
-                    continueProcess.call(this, curr3);
-                }, this, curr);
-            }
-            else
-                continueProcess.call(this, curr);
-        }
-    }
-
-    return this;
-});
-
-SJL.extend("getValue", function () {
-    var ret = [];
-    for (var c in this.elements)
-    {
-        var curr = this.elements[c];
-        if (typeof(curr.value) != 'undefined')
-            ret.push(curr.value);
-        else
-            ret.push(curr.innerHTML);
-    }
-
-    if (ret.length == 0)
-        return null;
-    else if (ret.length == 1)
-        return ret[0];
-    else
-        return ret;
 });
 
 /** Function to create animations. A callback is executed with current value beetween from and to, in function of time
@@ -527,8 +444,6 @@ SJL.extend(["upSpeedAnimate", "upAni"], function (from, to, milisseconds, callba
     return this;
 });
 
-
-
 SJL.extend("request", function (method, url, data, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_) {
     callback = callback || null;
     var xhttp = new XMLHttpRequest();
@@ -605,12 +520,12 @@ SJL.extend("request", function (method, url, data, callback, _context_, _callbac
     else
         return this;
 });
+//#endregion
 
+//#region ajax, including system and resources caching
 SJL.extend("get", function (url, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_) {
     return this.request("GET", url, null, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_);
 });
-
-
 
 SJL.extend("cacheOrGet", function (url, callback, _context_, _callbackAditionalArgs_, _progressCallback_, _optionalHeaders_, _onBeforeSend_) {
     if (SJL.cache.exists(url)){
@@ -748,7 +663,9 @@ SJL.extend(["include", "loadScript", "script", "require", "import"], function (s
 
     return this;
 });
+//#endregion
 
+//#region loading html and activities
 /** this method load an additional html. Scripts and Styles are automatically parsed and moved to header*/
 SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, onDone, _context_) {
     //scrolls through all subelements and, for elements that have "SJLload"  attribute, try auto load
@@ -984,7 +901,6 @@ SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHt
     
 });
 
-
 _SJL.alreadyImportedCSS ={};
 _SJL.alreadyImportedJavascript ={};
 SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_, autoLoadComponents_default_true) {
@@ -1056,6 +972,65 @@ SJL.extend(["preloadHtml", "preload"], function (htmlFileName, onDone, _context_
     return this.loadHtml(htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
 });*/
 
+/** Sets the value or */
+SJL.extend("setValue", function (data, autoLoadComponents_default_false) {
+	autoLoadComponents_default_false = autoLoadComponents_default_false || false;
+    for (var c in this.elements)
+    {
+        var curr = this.elements[c];
+
+        if (typeof(curr.value) != 'undefined') {
+            if (data.constructor === Array)
+                curr.value = data[c];
+            else
+                curr.value = data;
+        }
+        else {
+            var app = this.elements[0].SJL_CurrAPP;
+
+            var continueProcess = function(curr2){
+                if (data.constructor === Array) {
+                    curr2.innerHTML = data[c];
+                }
+                else
+                    curr2.innerHTML = data;
+
+                if (autoLoadComponents_default_false)
+                    this.autoLoadComponents(this.elements[c], function(){});
+            };
+
+            if ((curr.hasOwnProperty("SJL_CurrAPP") && curr.SJL_CurrAPP != null))
+            {
+                this.unloadActivity(function(curr3){
+                    continueProcess.call(this, curr3);
+                }, this, curr);
+            }
+            else
+                continueProcess.call(this, curr);
+        }
+    }
+
+    return this;
+});
+
+SJL.extend("getValue", function () {
+    var ret = [];
+    for (var c in this.elements)
+    {
+        var curr = this.elements[c];
+        if (typeof(curr.value) != 'undefined')
+            ret.push(curr.value);
+        else
+            ret.push(curr.innerHTML);
+    }
+
+    if (ret.length == 0)
+        return null;
+    else if (ret.length == 1)
+        return ret[0];
+    else
+        return ret;
+});
 
 SJL.extend(["unloadApp", "unloadActivity", "unloadActiveComponent"], function (onUnload, _context_, _args_) {
     var app = this.elements[0].SJL_CurrAPP;
@@ -1608,48 +1583,6 @@ SJL.extend("__processIf", function(currEl, onDone, attributesToElements){
     onDone.call(this);
 });
 
-/* call atributes like "onDoSomething" */
-//callEvent("onChange", {var:value, var2:value})
-SJL.extend(["callEvent", "callEventAttribute"], function(attributeName, keysValuesObject){ 
-    
-    //separe properties names in a csv (to be informed in function with eval) and their values in a vector
-    var argsNames = "";
-    var values = [];
-    for (var name in keysValuesObject)
-    {
-        argsNames = argsNames + name + ","
-        values.push(keysValuesObject[name])
-    }
-
-    //remove the las ',' from argsNames csv
-    if (argsNames.length > 0 && argsNames[argsNames.length-1] == ',')
-        argsNames = argsNames.substr(0, argsNames.length-1);
-
-    //find the attribute name in all elements cotnroled by current SJL instance
-    this.do(function(currEl){
-        for (var cA in currEl.attributes){
-            var currAttrib = currEl.attributes[cA];
-            
-            if (currAttrib.name && currAttrib.name.toLowerCase() == attributeName.toLowerCase())
-            {
-                if (typeof(currAttrib.value) == "function")
-                    currAttrib.value.apply(currEl, values);
-                else
-                    //func a function with arguments names as properties names of 'keysValuesObject' object
-                    //and arguments values as 'values' vector
-                    eval(
-                        '(function('+argsNames+'){'+
-                            'try{'+
-                                'eval(currAttrib.value);'+
-                            '}'+
-                            'catch(e){console.error("Error caught in SJL.callEvent: ", e)}'+
-                        '}).apply(currEl, values);'
-                    );
-            }
-        }
-    });
-});
-
 //auto load app specified in the url (http://server/#app/arg1,arg2)
 SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoad, _prefixOrFolder_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
     this.elements[0].oldUrl = this.elements[0].currUrl || "";
@@ -1686,7 +1619,9 @@ SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoa
     }
 });
 
+//#endregion
 
+//#region url changing and monitor
 //the flag bellow can be used to pause url monitor and change the url without SJL change activity
 _SJL.pauseAutoLoadAppFromUrl = false;
 //monitores the url, autoloading apps
@@ -1753,28 +1688,75 @@ SJL.extend(["changeUrlHash", "changeUrl"], function (url, allow_activity_autoloa
     }
 });
 
-//force an app destructor method
-SJL.extend(["unLoadApp", "unLoadActivity"], function (appName, onLoad, appArgumentsArray, _clearHtml_, _context_, _onLoadArguments_) {
-    //checks by old running app and notify them	
-    if (this.elements[0].hasOwnProperty("SJL_CurrAPP")) {
-        var app = this.elements[0].SJL_CurrAPP;
-        if (app.hasOwnProperty("destructor"))
-            app.destructor();
-        if (app.hasOwnProperty("stop"))
-            app.stop();
-        if (app.hasOwnProperty("release"))
-            app.release();
-        if (app.hasOwnProperty("free"))
-            app.free();
-        if (app.hasOwnProperty("destroy"))
-            app.destroy();
-        if (app.hasOwnProperty("dispose"))
-            app.dispose();
-    };
+//#endregion
 
-    this.setValue("");
+//#region other methods
+SJL.extend(["clearObject", "clear"], function(object, _currStack_size_){
+	object = object || this;
+	_currStack_size_ = _currStack_size_ || 1;
+	
+	if (_currStack_size_ >= 3)
+		return;
+	
+	for (var c in object)
+	{
+		if (object[c] instanceof Object)
+			this.clearObject(object[c], (parseInt(_currStack_size_)+1));
+		
+		if (object[c] instanceof Array)
+		{
+			while (object[c].length > 0)
+				object[c].pop();
+			
+			object[c].length = 0;
+		}
+		
+		//object[c] = null;
+		delete object[c];
+		
+	}
+});
 
-    return this;
+/* call atributes like "onDoSomething" */
+//callEvent("onChange", {var:value, var2:value})
+SJL.extend(["callEvent", "callEventAttribute"], function(attributeName, keysValuesObject){ 
+    
+    //separe properties names in a csv (to be informed in function with eval) and their values in a vector
+    var argsNames = "";
+    var values = [];
+    for (var name in keysValuesObject)
+    {
+        argsNames = argsNames + name + ","
+        values.push(keysValuesObject[name])
+    }
+
+    //remove the las ',' from argsNames csv
+    if (argsNames.length > 0 && argsNames[argsNames.length-1] == ',')
+        argsNames = argsNames.substr(0, argsNames.length-1);
+
+    //find the attribute name in all elements cotnroled by current SJL instance
+    this.do(function(currEl){
+        for (var cA in currEl.attributes){
+            var currAttrib = currEl.attributes[cA];
+            
+            if (currAttrib.name && currAttrib.name.toLowerCase() == attributeName.toLowerCase())
+            {
+                if (typeof(currAttrib.value) == "function")
+                    currAttrib.value.apply(currEl, values);
+                else
+                    //func a function with arguments names as properties names of 'keysValuesObject' object
+                    //and arguments values as 'values' vector
+                    eval(
+                        '(function('+argsNames+'){'+
+                            'try{'+
+                                'eval(currAttrib.value);'+
+                            '}'+
+                            'catch(e){console.error("Error caught in SJL.callEvent: ", e)}'+
+                        '}).apply(currEl, values);'
+                    );
+            }
+        }
+    });
 });
 
 /** Set a property in the elements
@@ -1863,7 +1845,6 @@ SJL.extend("getProperty", function (name, _defaultValue_) {
     else
         return _defaultValue_;
 });
-
 
 SJL.extend("setCssProperty", function (property, value) {
     for (var c in this.elements)
@@ -2071,6 +2052,9 @@ SJL.extend(["bindAttribute"], function(evalAddress, attributeName, addressContex
     );
 });
 
+//#endregion
+
+//#region SJLWatch system and SJL starter system
 SJL.cache = new (function(){
     this.destinations={
         RAM: "USERAM",
@@ -2271,3 +2255,4 @@ SJL.start = function(_conf_){
         );
 	};
 };
+//#endregion
