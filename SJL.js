@@ -753,7 +753,6 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                                 onDone.call(_context_ || _this);
                         }
                      }, _context_);
-                    
                 }
                 else
                 {
@@ -1040,11 +1039,14 @@ SJL.extend("getValue", function () {
         return ret;
 });
 
-SJL.extend(["unloadApp", "unloadActivity", "unloadActiveComponent"], function (onUnload, _context_, _args_) {
+SJL.extend(["unloadApp", "unloadActivity", "unloadActiveComponent"], function (onUnload, _context_, _args_, _clearHtml_) {
+
     var app = this.elements[0].SJL_CurrAPP;
     var elementP = this.elements[0];
     var _this = this;
     _args_ = _args_ || null;
+    if (typeof(_clearHtml_) == 'undefined')
+        _clearHtml_ = true;
         
     if (app != null)
     {
@@ -1065,22 +1067,34 @@ SJL.extend(["unloadApp", "unloadActivity", "unloadActiveComponent"], function (o
             var _this = this;
             app.dispose(function(){
                 elementP.SJL_CurrAPP = null;
-                delete elementP.SJL_CurrAPP
-                onUnload.call(_context_ || _this, _args_);
+                delete elementP.SJL_CurrAPP;
+                if (_clearHtml_)
+                    elementP.innerHTML = "";
+
+                if (onUnload)
+                    onUnload.call(_context_ || _this, _args_);
             });
         }
         else
         {
             elementP.SJL_CurrAPP = null;
-            delete elementP.SJL_CurrAPP
-            onUnload.call(_context_ || this, _args_);
+            delete elementP.SJL_CurrAPP;
+            if (_clearHtml_)
+                    elementP.innerHTML = "";
+
+            if (onUnload)
+                onUnload.call(_context_ || this, _args_);
         }
     }
     else
     {   
         elementP.SJL_CurrAPP = null;
-        delete elementP.SJL_CurrAPP
-        onUnload.call(_context_ || this, _args_);
+        delete elementP.SJL_CurrAPP;
+        if (_clearHtml_)
+            elementP.innerHTML = "";
+            
+        if (onUnload)
+            onUnload.call(_context_ || this, _args_);
     }
 });
 /** This method load an html named [appName].html and automaticaly instanciate an javascript class named [appName].
