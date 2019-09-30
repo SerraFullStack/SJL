@@ -1500,6 +1500,7 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
         index ++;
         var currValue = value[valueI];
         eval("var "+iteratorName + " = currValue");
+
         
         //take a copy of the text
         var copy = elementHtml;
@@ -1521,7 +1522,10 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
                         try{
                             var evalResult = (function(){ return eval(toEval)}).call(currEl);
                             if (typeof (evalResult) == 'undefined' || evalResult == null)
+                            {
                                 backup = true;
+                            }
+
                         }
                         catch (e){
                             backup = true;
@@ -1555,12 +1559,10 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
         //add the new html to parent of currEl
         var tempElement = currEl.cloneNode();
 
-        tempElement.innerHTML = copy;
-        globalParent = parentOfCurrEl;
         parentOfCurrEl.insertBefore(tempElement, currEl);
+        tempElement.outerHTML = copy;
+        globalParent = parentOfCurrEl;
         $(tempElement).__processLoops(function(){}, attributesToElements);
-
-    
         
     }
     currEl.parentNode.removeChild(currEl);
