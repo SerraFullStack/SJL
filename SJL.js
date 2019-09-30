@@ -1514,6 +1514,7 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
         index ++;
         var currValue = value[valueI];
         eval("var "+iteratorName + " = currValue");
+
         
         //take a copy of the text
         var copy = elementHtml;
@@ -1535,7 +1536,10 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
                         try{
                             var evalResult = (function(){ return eval(toEval)}).call(currEl);
                             if (typeof (evalResult) == 'undefined' || evalResult == null)
+                            {
                                 backup = true;
+                            }
+
                         }
                         catch (e){
                             backup = true;
@@ -1567,14 +1571,12 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
         //restore [[ and ]]
         copy = copy.replace(new RegExp("__backOpen__", 'g'), "{{").replace(new RegExp("__backClose__", 'g'), '}}');
         //add the new html to parent of currEl
-        var tempElement = currEl.cloneNode();
-
+        var tempElement = document.createElement("span");
         tempElement.innerHTML = copy;
-        globalParent = parentOfCurrEl;
-        parentOfCurrEl.insertBefore(tempElement, currEl);
-        $(tempElement).__processLoops(function(){}, attributesToElements);
-
-    
+        var tempSJL = $(tempElement.childNodes[0]);
+        parentOfCurrEl.insertBefore(tempElement.childNodes[0], currEl);
+        tempSJL.__processLoops(function(){}, attributesToElements);
+        delete tempElement;
         
     }
     currEl.parentNode.removeChild(currEl);
