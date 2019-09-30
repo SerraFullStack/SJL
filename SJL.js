@@ -1557,12 +1557,12 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
         //restore [[ and ]]
         copy = copy.replace(new RegExp("__backOpen__", 'g'), "{{").replace(new RegExp("__backClose__", 'g'), '}}');
         //add the new html to parent of currEl
-        var tempElement = currEl.cloneNode();
-
-        parentOfCurrEl.insertBefore(tempElement, currEl);
-        tempElement.outerHTML = copy;
-        globalParent = parentOfCurrEl;
-        $(tempElement).__processLoops(function(){}, attributesToElements);
+        var tempElement = document.createElement("span");
+        tempElement.innerHTML = copy;
+        var tempSJL = $(tempElement.childNodes[0]);
+        parentOfCurrEl.insertBefore(tempElement.childNodes[0], currEl);
+        tempSJL.__processLoops(function(){}, attributesToElements);
+        delete tempElement;
         
     }
     currEl.parentNode.removeChild(currEl);
