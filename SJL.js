@@ -1219,7 +1219,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
             }
         //}
 
-        //Now, to help further the development, in the container element (only in the container element)
+        /*//Now, to help further the development, in the container element (only in the container element)
         //are  created methods with the same names of the methods of the new object. This way it is easy
         //to  call  methods of the new object, just take the container element and call the methodo with
         //the same name. These methods will redirect execution into the new object.
@@ -1254,7 +1254,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 
 				appSPointer.setProperty("appInstanceMethods", appInstanceMethods);
 			}
-        //}
+        //}*/
 
 
         
@@ -1267,16 +1267,25 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
 
                 var destinationInstance = element.SJL_CurrAPP;
                 
-                if (attribute == "active")
-                    eval("destinationInstance."+attribute +" = newValue");
+                /*if (attribute == "active")
+                    eval("destinationInstance."+attribute +" = newValue");*/
 
-                var setName = "set" + attribute[0].toUpperCase() + (attribute.length > 1 ? attribute.substring(1) : "");
+                var setName = "set" + attribute;
+
+                //get all method of instance
+				var instanceMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(appInstance)).filter(function (p) {
+                    return typeof appInstance[p] === 'function';
+                });
                 
-                
-                eval ("if (typeof(destinationInstance."+setName+") == 'function'){"+
-                    "destinationInstance."+setName+".call(destinationInstance, newValue, element)"+
-                "}");
-				
+                //look for a method named set[propertyname]
+				for (var currProp in instanceMethods)
+				{
+                    var curr = instanceMethods[currProp];
+                    if (curr.toLowerCase() == setName.toLowerCase()){
+                        eval ("destinationInstance."+curr+".call(destinationInstance, newValue, element)");
+                    }
+                };
+                delete instanceMethods;
             }
 
             //hooks setAttribute and getAttribute  methods of elements
@@ -1356,11 +1365,11 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                                     var appInstancesMethods = this.appInstanceMethods;
                                     var destinationInstance = this.SJL_CurrAPP;
                     
-                                    var setName = "get" + name[0].toUpperCase() + (name.length > 1 ? name.substring(1) : "");
+                                    var getName = "get" + name;
                                     for (var currProp in appInstancesMethods)
                                     {
                                         var currMethod = appInstancesMethods[currProp];
-                                        if (currMethod.toLowerCase() == setName.toLowerCase())
+                                        if (currMethod.toLowerCase() == getName.toLowerCase())
                                             return destinationInstance[currMethod].call(destinationInstance, this);
                                     };
 
