@@ -1514,6 +1514,8 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
         index ++;
         var currValue = value[valueI];
         eval("var "+iteratorName + " = currValue");
+        eval("var "+iteratorName + "Index = index");
+        var iteratorIsAnObject = typeof(currValue) == "object";
 
         
         //take a copy of the text
@@ -1530,14 +1532,26 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
                     var toEval = copy.substr(startPos+2, endPos-(startPos+2));
                     var toReplace = copy.substr(startPos, endPos-startPos+2);
                     var backup = false;
+                    var evalResult = "";
                     //if (toEval.trim().indexOf(iteratorName) > -1)
                     {
 
                         try{
-                            var evalResult = (function(){ return eval(toEval)}).call(currEl);
-                            if (typeof (evalResult) == 'undefined' || evalResult == null)
+                            //if the iterator is a object, allow to user this as ther self index
+                            if (iteratorIsAnObject && toEval == iteratorName)
                             {
-                                backup = true;
+                                evalResult = index;
+                            }
+                            else{
+                                //var evalResult = (function(){ return eval(toEval)}).call(currEl);
+                                var func = function(){
+                                    eval("evalResult = "+toEval);
+                                };
+                                func.call(currEl);
+                                if (typeof (evalResult) == 'undefined' || evalResult == null)
+                                {
+                                    backup = true;
+                                }
                             }
 
                         }
@@ -1555,7 +1569,18 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
                     }
                     else
                     {
-                        copy = copy.replace(new RegExp(toReplace, 'g'), evalResult);
+                        //toReplace = toReplace.
+                        //    replace(/\-/g, '\\-').
+                        //    replace(/[/]/g, '\\/').
+                        //    replace(/\./g, '\\.').
+                        //    replace(/\\/g, '\\\\').
+                        //    replace(/\*/g, '\\*').
+                        //    replace(/\+/g, '\\+').
+                        //    replace(/\?/g, '\\?').
+                        //    replace(/\|/g, '\\|');
+
+                        //copy = copy.replace(new RegExp(toReplace, 'g'), evalResult);
+                        copy = copy.split(toReplace).join(evalResult);
                     }
                 }
                 else
