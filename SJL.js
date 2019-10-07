@@ -1273,8 +1273,8 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                 var setName = "set" + attribute;
 
                 //get all method of instance
-				var instanceMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(appInstance)).filter(function (p) {
-                    return typeof appInstance[p] === 'function';
+				var instanceMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(destinationInstance)).filter(function (p) {
+                    return typeof destinationInstance[p] === 'function';
                 });
                 
                 //look for a method named set[propertyname]
