@@ -1273,18 +1273,15 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                 var setName = "set" + attribute;
 
                 //get all method of instance
-				var instanceMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(destinationInstance)).filter(function (p) {
-                    return typeof destinationInstance[p] === 'function';
-                });
-                
-                //look for a method named set[propertyname]
-				for (var currProp in instanceMethods)
-				{
-                    var curr = instanceMethods[currProp];
-                    if (curr.toLowerCase() == setName.toLowerCase()){
-                        eval ("destinationInstance."+curr+".call(destinationInstance, newValue, element)");
+                for (var currMethod in destinationInstance){
+                    //return typeof destinationInstance[p] === 'function';
+                    if (destinationInstance[currMethod] != null && typeof(destinationInstance[currMethod].constructor) == "function")
+                    {
+                        if (currMethod.toLowerCase() == setName.toLowerCase())
+                            destinationInstance[currMethod].call(destinationInstance, newValue, element, this);   
                     }
                 };
+				
                 delete instanceMethods;
             }
 
@@ -1362,16 +1359,20 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                         {
                             try{
                                 if (this.SJL_CurrAPP){
-                                    var appInstancesMethods = this.appInstanceMethods;
                                     var destinationInstance = this.SJL_CurrAPP;
-                    
                                     var getName = "get" + name;
-                                    for (var currProp in appInstancesMethods)
-                                    {
-                                        var currMethod = appInstancesMethods[currProp];
-                                        if (currMethod.toLowerCase() == getName.toLowerCase())
-                                            return destinationInstance[currMethod].call(destinationInstance, this);
+                                        
+                                    var appInstanceMethods = [];
+                                    for (var currMethod in destinationInstance){
+                                        
+                                        //return typeof destinationInstance[p] === 'function';
+                                        if (destinationInstance[currMethod] != null && typeof(destinationInstance[currMethod].constructor) == "function")
+                                        {
+                                            if (currMethod.toLowerCase() == getName.toLowerCase())
+                                                return destinationInstance[currMethod].call(destinationInstance, this);   
+                                        }
                                     };
+
 
                                     return this.__getAttribute(name);
                                 }
