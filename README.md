@@ -95,7 +95,8 @@ $(“.allElementsWithThisClass”).animate(0, 1, 250, (currValue) => {
        |
 
 #### 1.1.1.8) downSpeedAnimate
-(animation speed)
+
+    (animation speed)
        .
       / \
        |o
@@ -108,6 +109,7 @@ $(“.allElementsWithThisClass”).animate(0, 1, 250, (currValue) => {
        |                               o 
      --+--------------------------------> (time)
        |
+
 #### 1.1.1.9) include
 #### 1.1.1.10) includeUsingTags
 #### 1.1.1.11) autoLoadComponents
