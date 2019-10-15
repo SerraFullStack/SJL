@@ -1,4 +1,10 @@
-SJL is javascript framework I use to make my SPA’s. I wrote it to understant more about Javascript and to make my work easier.
+SJL - A component based javascript library.
+
+SJL is javascript library I use to make my SPA’s. I wrote it to understant more about Javascript and to make my work easier.
+
+SJL can work together another frameworks, like Vue.js, ReactJS or Angular.
+
+SJL also can be used as a framework. If you choose this option, take a look in 'SJL.init' function
 
 # 1) Resources overview
 ## 1.1) Selector
@@ -14,15 +20,94 @@ $(“.allElementsWithThisClass”)
 ```
 
 ### 1.1.1) SJL Methods to work with elements	
+
+Bellow, you can see some things SJL can do with selected elements
 	
 #### 1.1.1.1) clearObject
 #### 1.1.1.2) hide
+This method just set 'display' css property to 'none', hidding the element.
+
+```javascript
+$(“.allElementsWithThisClass”).hide();
+```
 #### 1.1.1.3) show
+As 'hide', this method just set 'display' css property, but to 'block', showing the element.
+
+```javascript
+$(“.allElementsWithThisClass”).show();
+```
+
 #### 1.1.1.4) setValue
+Changes the innerHTML or value of an element. If element contains the 'value' property, this will be changed. If element does't contains the 'value' property, the innerHTML will be changed.
+
+```javascript
+$(“.allElementsWithThisClass”).setValue("New value of my element");
+```
+
 #### 1.1.1.5) getValue
+If element contaisn the 'value' property, it will be returned. If element does't contains this property, this method will return the 'innerHTML' of the element.
+
+```javascript
+var elementValue = $(“.allElementsWithThisClass”).getValue("New value of my element");
+```
 #### 1.1.1.6) animate
+This method uses browser resources (requestAnimationFrame) to allow your to make animations using javascript. The animatin is based in sum or decreasing of a value. You must supply a start value and a end value and SJL will scrol from 'start value' to 'end value' calling a callback with current value.
+
+This method has following parameters:
+
+    from: the start value 
+    to: the end value
+    milisseconds: the duration of animation
+    callback: the callback to be called with current scroll value
+    [endCallback]: An optional callback to be called at end of animation
+    [_pointers_]: Optional argument to be sent to each 'callback' call and to 'endCallback'
+    
+About callback param: Callback param is a function that will be called in each animation step. This funciton will be called with following arguments:
+
+    currentValue: The current scroll value (the current value of animation)
+    _pointer_: The value you ifromed to 'animate' method in the '_pointers_' argument;
+
+About endCallback param: endCallback param is a function that will be called when SJL finish the animation. This funciton will be called with following arguments:
+
+    _pointer_: The value you ifromed to 'animate' method in the '_pointers_' argument;
+
+An example of 'animation' call:
+
+```javascript
+$(“.allElementsWithThisClass”).animate(0, 1, 250, (currValue) => {
+    this.setCssProperty("opacity", currValue);
+});
+```
+
 #### 1.1.1.7) upSpeedAnimate
+    (animation speed)
+       .
+      / \
+       |                               o
+       |                              o
+       |                            o 
+       |                         o
+       |                     o
+       |                o 
+       |         o
+       |o 
+     --+--------------------------------> (time)
+       |
+
 #### 1.1.1.8) downSpeedAnimate
+(animation speed)
+       .
+      / \
+       |o
+       | o
+       |   o 
+       |      o
+       |          o
+       |               o 
+       |                      o
+       |                               o 
+     --+--------------------------------> (time)
+       |
 #### 1.1.1.9) include
 #### 1.1.1.10) includeUsingTags
 #### 1.1.1.11) autoLoadComponents
