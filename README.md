@@ -6,6 +6,8 @@ SJL can work together another frameworks, like Vue.js, ReactJS or Angular.
 
 SJL also can be used as a framework. If you choose this option, take a look in 'SJL.init' function
 
+---
+
 # 1) Resources overview
 ## 1.1) Selector
 
@@ -80,6 +82,9 @@ $(“.allElementsWithThisClass”).animate(0, 1, 250, (currValue) => {
 ```
 
 #### 1.1.1.7) upSpeedAnimate
+
+The difference between upSpeedAnimate and animate is the function used to get the current value. While the animate function uses a linear function, upSpeedAnimate uses an exponential function, as shown below. The parameters are the same of 'animate'.
+
     (animation speed)
        .
       / \
@@ -96,6 +101,8 @@ $(“.allElementsWithThisClass”).animate(0, 1, 250, (currValue) => {
 
 #### 1.1.1.8) downSpeedAnimate
 
+The difference between downSpeedAnimate and animate is the function used to get the current value. While the animate function uses a linear function, downSpeedAnimate uses an exponential function, as shown below. The parameters are the same of 'animate'.
+
     (animation speed)
        .
       / \
@@ -110,33 +117,58 @@ $(“.allElementsWithThisClass”).animate(0, 1, 250, (currValue) => {
      --+--------------------------------> (time)
        |
 
-#### 1.1.1.9) include
-#### 1.1.1.10) includeUsingTags
-#### 1.1.1.11) autoLoadComponents
-#### 1.1.1.12) loadHtmlText
-#### 1.1.1.13) loadHtml
-#### 1.1.1.14) preloadHtml
-#### 1.1.1.15) loadStaticComponent
-#### 1.1.1.16) loadActivity
-#### 1.1.1.17) callEvent
-#### 1.1.1.18) setProperty
 #### 1.1.1.19) setAttribute
+
+This method allow you to set attributes of HTML elements
+
 #### 1.1.1.20) getProperty
 #### 1.1.1.21) setCssProperty
 #### 1.1.1.22) getCssProperty
 #### 1.1.1.23) getComputedCssProperty
 #### 1.1.1.24) download
 #### 1.1.1.25) stringify
-#### 1.1.1.26) bind
-#### 1.1.1.27) bindAttribute
 
-## includding css and javascript files
+
+---
+
+## 1.2) Includding css and javascript files
+### 1.2.1) include
+
+This method can be used to load another javascript or css files form server. You call this method directly from 'SJL' object
+
+The arguments of this method are:
+    src: The adress of file to be loaded
+    onDone: A callback to be called when file is loaded.
+
+
+```javascript
+$(“.allElementsWithThisClass”).include('myScriptFolder/MyScript.js', ()=>{
+    console.log("The file was loaded");
+});
+```
+
+#### 1.1.1.14) preloadHtml
+#### 1.1.1.10) includeUsingTags
+
 
 ## filling elemnts with HTML files
+#### 1.1.1.12) loadHtmlText
+#### 1.1.1.13) loadHtml
+
 
 ## Loading components
 SJL can load components by addresses in the elements in the DOM. When SJL loads a component, it perform many operations and creste many references in the created object. 
 The first thing to be highlited is the instance of loaded component: When SJL loads an html file into a DOM element, its create an instance of the component class if this name is equals to filename witout the extension, eg: If the file “MyComponent.html” contains a class “MyComponent”, this class will be instantiated. Once time instantiated, the chosen DOM element will receive an reference to new object. This reference will be the same name of classe (on our example, the new property of the element will be called “MyComponent”).
+
+#### 1.1.1.16) loadActivity
+
+---
+
+## 1.3) Other resrouces
+#### 1.1.1.17) callEvent
+#### 1.1.1.18) setProperty
+#### 1.1.1.26) bind
+#### 1.1.1.27) bindAttribute
 
 #loops
 ##SJLForeach
@@ -150,14 +182,20 @@ The first thing to be highlited is the instance of loaded component: When SJL lo
 <div>
 ```
 
-## Activities
+---
+---
 
-## Auto loading activities by parsing the current URL
 
 # using SJL as Framework
 
 ## Starting up SJL
 
+## Activities
+
+## Auto loading activities by parsing the current URL
+
+---
+---
 
 # Requests 
 
@@ -173,8 +211,11 @@ The first thing to be highlited is the instance of loaded component: When SJL lo
 
 ## cacheOrGet
 
+# Other things I want to tell you
 
+## what append when you set an element attribute?
 
+If the element is only a simple html, nothing will happening. But if the element is an SJL component container (element contians SJLLoad attribut) the SJL will try find in the component intance, a method called "set[attributename]". It allow you to easy interract with loaded activities and components.
 
 
 
@@ -183,7 +224,10 @@ The first thing to be highlited is the instance of loaded component: When SJL lo
 # how to (faq)
 ## generic
 ### including another js and css files
-
+```javascript
+    SJL.include("fileFolder\myfile.js");
+    SJL.include("fileFolder\myfile.css");
+```
 ## start activity auto loader
 ### enabling url monitor
 	
@@ -191,6 +235,9 @@ The first thing to be highlited is the instance of loaded component: When SJL lo
 #### changeUrl
 		
 #### go
+```javascript
+    SJL.go("otherActivity")
+```
 	
 
 ## elements
@@ -216,7 +263,8 @@ $("#elementId").show();
 $("#elementId").hide();
 ```
 
-### animate
+### animate		
+#### linerar
 ```javascript
 $(".slideTheseElements").animate(0, 100, (curr) =>{
     //inside this function, 'this' handles to '$(".slideTheseElements")' SJL instance
@@ -224,21 +272,59 @@ $(".slideTheseElements").animate(0, 100, (curr) =>{
     this.setCssProperty("height", curr + "px");
 })
 ```
-		
-#### linerar
 	
 #### upspeed
+```javascript
+$(".slideTheseElements").upSpeedAnimate(0, 100, (curr) =>{
+    this.setCssProperty("height", curr + "px");
+})
+```
 	
 #### downspeed
-		
+
+```javascript
+$(".slideTheseElements").downSpeedAnimate(0, 100, (curr) =>{
+    this.setCssProperty("height", curr + "px");
+})
+```	
 
 ### setValue
+```javascript
+//setting the innerHTML of a div
+$("#aDivWithThisId").setValue("New div html")
+//setting a vlaue of an input
+$("#anInputWithThisId").setValue("New input value")
+```
 
 ### getValue
+```javascript
+//getting the innerHTML of a div
+var divHtml = $("#aDivWithThisId").getValue();
+//getting a vlaue of an input
+var inputValue = $("#anInputWithThisId").getValue();
+```
+### filling elements with html files
+```javascript
+$("#myElement").loadHtml("folderOnServer/myHtmlFile.html", ()=>{
+    console.log("Ok, html was loaded in the element");
+});
+```
 
-### setting and html string inside a element
+### filling an element with a html text
+```javascript
+$("#myElement").loadHtmlText(
+    `<div class="myContainer">
+        <div 
+            sjlonload="components/myComponent
+        ></div>
+    </div>`, 
+    ()=>{
+        console.log("Ok, html was loaded in the element");
+    }
+);
+/* the difference between loadHtmlText and setValue is that 'loadHtmlText' will triger SJL to load activities and components (the elements with 'SJLLoad' attribute will be loaded).*/
+```
 
-### loading external html inside elements
 
 ### loading a activity/component inside a element
 
@@ -246,7 +332,7 @@ $(".slideTheseElements").animate(0, 100, (curr) =>{
 
 ### autoload components using SJLLoad
 
-### autoload component using <SJL-folder.componentname
+### autoload component using <sjl-folder.componentname
 
 ### using attributes
 
