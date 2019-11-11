@@ -190,6 +190,44 @@ The first thing to be highlited is the instance of loaded component: When SJL lo
 
 ## Starting up SJL
 
+## Components
+
+### SJL COMPONENT STRUCTURE AND COMPONENT LIFE CYCLE
+
+A sjl component is composed by a javascript code, a css code and a html code.
+
+#### Javascript
+	
+The javascript code of a SJL component is composed by a class with the same name of component file. The SJl will look for this class to make an instance of this. 
+
+The sjl execute a sequence os steps, and this steps results in calls of some class methods, that you can use to interract with component lifecycle. The SJL component lifecycle is: instance -> initialization -> started -> disposing -> stopped. At 'instance' step, the class constructor will be called. At 'initilization' step, the 'init' method will be called. In the'stopping' step, the 'stop' method will be called. And in the 'diposing' step, the method 'dispose' will be called.
+
+The component script can contais some methods that SJL will run in specific moments. Seel them bellow:
+    
+    'init' method: This method will be called imediatelly after SJL instantiate the class. This method will be called before the HTML be parsed. You can use this method to load data to be used in 'ifs' and 'fors' definitions. This method receives a callback that must be called to SJL continue with component loading process.
+
+	'start' method: This method will  be executed after the componentn instance is done. The copmonent instance is considered done before the HTML be parsed.
+
+	'stop' method: Stop method will be executed when component is destroyed, i.g. 'dispose' method: This method is very similar to 'stop', but receives a callback, that must be called to SJL continue with the component destroy process.
+
+#### Css
+The css of a SJL component does not contains specif rules, but contais a useful suggestion: 
+Use a main aggrupation for you component using the component name. This suggestion must be used with the HTML, as can be seen bellow.
+
+```html
+<style type="text/css">
+    MyComponentName .myClass{
+
+    }
+</style>
+
+<MyComponentName>
+    <div class="myClass">
+        ...
+    </div>
+</MyComponentName>
+```
+
 ## Activities
 
 ## Auto loading activities by parsing the current URL
@@ -199,11 +237,31 @@ The first thing to be highlited is the instance of loaded component: When SJL lo
 
 # Requests 
 
+You can use SJL to make requests to your server. Requests, in the background, are ajax requests. SJL allow you to make ajax in a morea easy way, using callbacks or promises to treat the server return.
+
 ## Requests with callbacks
+Callbacks are the classic way to wait from something in javascript, and you can use them in the requests make with SJL.
 
 ## Requests with Promises
+You can, also, use Promises instread classic callbacks to treat ajax responses.
 
 ## get
+
+Thsi is the more used http verb. To use them with SJL, just follow the 'get'.
+
+The structure of this method is:
+    
+    SJL.get(
+        resourceURI,
+        callbackFunctionOrPromise
+    );
+
+```javascript
+SJL.get("myserver/myresource", (r) => {
+
+});
+
+```
 
 ## post
 
