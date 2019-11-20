@@ -1128,6 +1128,8 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         });
     //}
 
+    
+
 	this.loadHtml(appName + ".html", function () {
         var appInstance = null;
         appArgumentsArray = appArgumentsArray || null;
@@ -1388,10 +1390,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
             });
         //}
 
-        
         var continueStart = function(){
-
-            
             delete fixAppSPointer;
             //parse SJLLoops
             var attributesForDynamicElements = {ctrl: appInstance, app: appInstance};
@@ -1405,16 +1404,28 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                 //{
                     /*if (typeof (appInstance.constructor) != 'undefined')
                     appInstance.constructor();*/
-                    if (typeof (appInstance.initialize) != 'undefined')
-                        appInstance.initialize(appArgumentsArray);
-                    if (typeof (appInstance.start) != 'undefined')
-                        appInstance.start(appArgumentsArray);
-                    if (typeof (appInstance.create) != 'undefined')
-                        appInstance.create(appArgumentsArray);
+                    try{
+                        if (typeof (appInstance.initialize) != 'undefined')
+                            appInstance.initialize(appArgumentsArray);
+                    }
+                    catch(e){ console.error("Error calling function 'initialize'  of " + appName + ": ", e);}
+
+                    try{
+                        if (typeof (appInstance.start) != 'undefined')
+                            appInstance.start(appArgumentsArray);
+                    }
+                    catch(e){ console.error("Error calling function 'start' of " + appName + ": ", e);}
+
+                    try{
+                        if (typeof (appInstance.create) != 'undefined')
+                            appInstance.create(appArgumentsArray);
+                    }
+                    catch(e){ console.error("Error calling function 'create' of " + appName + ": ", e);}
                 //}
                 //autoload child components
                 var processeds = 0;
                 var _this = this;
+
                 this.do(function(c){
                     
                     this.autoLoadComponents(c, function(){
