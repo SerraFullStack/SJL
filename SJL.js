@@ -2130,6 +2130,39 @@ SJL.extend(["bindAttribute"], function(evalAddress, attributeName, addressContex
     );
 });
 
+//this methos can be used for waiting for some object is != undefined or null of 
+//until a function returns true. When a object is different of undefined or null or 
+//function returns true, the callback will be called
+SJL.extend(["wait"], function(evalcodeOrFunction, callback, _checkInterval_, _context_){
+    var _checkInterval_ = _checkInterval_ || 10;
+    var waiter = setInterval(function(){
+        var temp = null;
+        try{
+            if (typeof(evalcodeOrFunction) == "function")
+                temp = evalcodeOrFunction.call(_context_);
+            else
+                temp = eval(evalcodeOrFunction); 
+        }
+        catch(e){
+            //console.error("error in SJL.wait: ", e);
+        }
+
+        console.log("temp = ", temp);
+        if (
+                //(typeof(temp) != "undefined") && 
+                (temp != null) && 
+                (temp != "undefined") &&
+                (temp != false)
+        )
+        {
+            clearInterval(waiter);
+            callback.call(_context_ || window, temp);
+        }
+        //return temp;
+
+    }, _checkInterval_);
+
+});
 //#endregion
 
 //#region SJLWatch system and SJL starter system
