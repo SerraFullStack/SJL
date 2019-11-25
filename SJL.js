@@ -2159,7 +2159,6 @@ SJL.extend(["wait"], function(evalcodeOrFunction, callback, _checkInterval_, _co
             //console.error("error in SJL.wait: ", e);
         }
 
-        console.log("temp = ", temp);
         if (
                 //(typeof(temp) != "undefined") && 
                 (temp != null) && 
