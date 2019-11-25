@@ -1852,7 +1852,11 @@ SJL.extend("setProperty", function (name, value, _try_set_attribute_) {
         {
             if (this.elements[c].getAttribute(name) != null)
             {
-                this.elements[c].setAttribute(name, value);
+                //load a new activity
+                if (name.toLowerCase() == "sjlload")
+                    SJL._parseAcNameAndArgsAndLoad(this.elements[c], value, function(){}, this);
+                else
+                    this.elements[c].setAttribute(name, value);
             }
         }
             
@@ -1869,11 +1873,19 @@ SJL.extend("setAttribute", function (name, value, _try_set_property_) {
 
     for (var c in this.elements)
     {
-        if (_try_set_property_ == true)
-        if (this.elements[c].hasOwnProperty(name))
-            eval("this.elements[c]."+name+" = value;");
+
+        if (name.toLowerCase() == "sjlload")
+        {
+            //load a new activity
+            SJL._parseAcNameAndArgsAndLoad(this.elements[c], value, function(){}, this);
+        }
+        else{
+            if (_try_set_property_ == true)
+            if (this.elements[c].hasOwnProperty(name))
+                eval("this.elements[c]."+name+" = value;");
             
-        this.elements[c].setAttribute(name, value);
+            this.elements[c].setAttribute(name, value);
+        }
     }
 
     return this;
