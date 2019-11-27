@@ -2147,6 +2147,7 @@ SJL.extend(["bindAttribute"], function(evalAddress, attributeName, addressContex
 //function returns true, the callback will be called
 SJL.extend(["wait"], function(evalcodeOrFunction, callback, _checkInterval_, _context_){
     var _checkInterval_ = _checkInterval_ || 10;
+    console.log("wait called");
     var waiter = setInterval(function(){
         var temp = null;
         try{
@@ -2160,7 +2161,7 @@ SJL.extend(["wait"], function(evalcodeOrFunction, callback, _checkInterval_, _co
         }
 
         if (
-                //(typeof(temp) != "undefined") && 
+                (typeof(temp) != "undefined") && 
                 (temp != null) && 
                 (temp != "undefined") &&
                 (temp != false)
@@ -2361,6 +2362,9 @@ SJL.start = function(_conf_){
     
     if (_conf_.usePermanentCache || false)
         SJL.cache.defaultDestination = SJL.cache.destinations.LOCALSTORAGE;
+    else
+        //force cler of cache
+        SJL.cache.clear();
 	
 	if (_conf_.watchInterval)
 		_SJL._watchInterval = _conf_.watchInterval
