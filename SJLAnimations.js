@@ -122,4 +122,41 @@
             callback.call(_context_, "rgb("+newColor_r+","+newColor_g+","+newColor_b+")", destColor);
         }, _onEnd_, _context_);
     });
+
+    //this function runs a vector of functions waiting a callback between them
+    /*
+        Example:
+        SJL.play([function(f){
+            console.log("function 1");
+            setTimeout(f, 1000);
+        }, function(f){
+            console.log("function 2");
+            setTimeout(f, 1000);
+        }, function(f){
+            console.log("function 3");
+            setTimeout(f, 1000);
+        }]);
+
+        you can use functions return to return time to execute next function
+    */
+    SJL.extend("play", function(fVector, _ctx_){
+        var currP = 0;
+        _ctx_ = _ctx_ || window;
+
+        var pl = function(){
+            if (fVector[currP]){
+                var autoFRun = fVector[currP++].call(_ctx_, function(){
+                    pl();
+                });
+
+                if (autoFRun && autoFRun == parseInt(autoFRun))
+                {
+                    setTimeout(pl, autoFRun);
+                }
+            }
+        };
+
+        pl();
+        
+    });
 })();
