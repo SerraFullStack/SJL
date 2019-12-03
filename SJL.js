@@ -725,12 +725,17 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                     componentName = componentName.replace(/\./g, "/");
                     componentName = componentName.replace(/\-/g, "/");
                     componentName = componentName.replace(/\:/g, "/");
-                globalName = currElement;
-                    console.log("Found sjl component tag: "+componentName);
-                }
+                    globalName = currElement;
 
-                
-                
+                    //character ^ can be used as a work arround to not-case-sensity of xhtml
+                    while (componentName.indexOf('^') > -1)
+                    {
+                        var p1 = componentName.substr(0, componentName.indexOf('^'));
+                        var p2 = componentName.substr(componentName.indexOf('^')+1);
+                        p2 = p2[0].toUpperCase() + p2.substr(1);
+                        componentName = p1 + p2;
+                    }
+                }
 
 
             if (componentName == null)
