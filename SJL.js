@@ -977,12 +977,12 @@ SJL.extend(["preloadHtml", "preload"], function (htmlFileName, onDone, _context_
     return this;
 });
 
-
-/*SJL.extend(["loadComponent", "loadStaticComponent"], function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
+//this method just load the component file and parse Javascript. No class instance isdone
+SJL.extend(["includeComponent", "loadStaticComponent"], function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
     if (htmlName.indexOf(".htm") == -1)
         htmlName += ".html";
     return this.loadHtml(htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
-});*/
+});
 
 /** Sets the value or */
 SJL.extend("setValue", function (data, autoLoadComponents_default_false) {
@@ -1134,7 +1134,10 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
     //}
 
     
+    
 
+    
+    var _thiss = this;
 	this.loadHtml(appName + ".html", function () {
         var appInstance = null;
         appArgumentsArray = appArgumentsArray || null;
@@ -1403,8 +1406,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
             eval ("attributesForDynamicElements."+appName+"Instance=appInstance");
             eval ("attributesForDynamicElements.javascript ={"+appName+": appInstance}");
             eval ("attributesForDynamicElements."+camelizedAppName+"=appInstance");
-
-            this.__processLoops(function(){
+            _thiss.__processLoops(function(){
                 //try call new instance initilizers
                 //{
                     /*if (typeof (appInstance.constructor) != 'undefined')
@@ -1429,13 +1431,12 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                 //}
                 //autoload child components
                 var processeds = 0;
-                var _this = this;
 
-                this.do(function(c){
+                _thiss.do(function(c){
                     
-                    this.autoLoadComponents(c, function(){
+                    _thiss.autoLoadComponents(c, function(){
                         processeds++;
-                        if (processeds == _this.elements.length)
+                        if (processeds == _thiss.elements.length)
                         {
                             //if there is a event called sjlonload on element, call them
                             this.callEvent("sjlonload", {sjl: this, instance: appInstance});
@@ -1457,7 +1458,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
         else
             continueStart.call(this);
 
-	}, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_, false);
+    }, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_, false);
     return this;
 });
 
