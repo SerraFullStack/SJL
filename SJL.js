@@ -2296,7 +2296,17 @@ SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _arguments_, _log
                             //checks if the value was changed
                             if (currVal != element.lastValue){
                                 //call de observation function
-                                element.func.call(element.context, currVal, element.lastValue, element._arguments_);
+                                try{
+                                    element.func.call(element.context, currVal, element.lastValue, element._arguments_);
+                                }
+                                catch(error){
+                                    if (element.stopOnError)
+                                        SJL._watches[currIndex] = null;
+                                    
+                                    if (element.logErrors)
+                                        console.error("Error caught in SJLWatch (calling callback). Watch params: ", element, ". Error: ", error);
+
+                                }
 
                                 //update the lastValue (to look for new changes)
                                 element.lastValue = currVal;
@@ -2387,4 +2397,15 @@ SJL.start = function(_conf_){
         );
 	};
 };
+//#endregion
+
+//#region others
+//According to the 'compatibility' section of the page https://developer.mozilla.org/pt-BR/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach
+if ( !Array.prototype.forEach ) {
+    Array.prototype.forEach = function(fn, scope) {
+        for(var i = 0, len = this.length; i < len; ++i) {
+        fn.call(scope, this[i], i, this);
+        }
+    };
+}
 //#endregion
