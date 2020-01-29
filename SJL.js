@@ -1305,7 +1305,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                     
                     curr.setAttribute = function(name, value, __dispatchActivityEvents__)
                     {
-                        if (value != curr.getAttribute(name)){
+                        //if (value != curr.getAttribute(name)){
                             this.__setAttribute(name, value);
 
                             //check if user is trying to change SJL attributes
@@ -1341,7 +1341,7 @@ SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName
                                     }
                                 }
                             }
-                        }
+                        //}
                     };
                 }
 
@@ -1467,7 +1467,7 @@ SJL.extend("__processLoops", function(onDone, attributesToElements){
     var elem = this.$("*");
     var waiting = 0;
     var _this = this;
-    var waitingCheck = function (){
+    /*var waitingCheck = function (){
         waiting--;
         console.log(waiting);
         if (waiting <= 0)
@@ -1475,7 +1475,7 @@ SJL.extend("__processLoops", function(onDone, attributesToElements){
             onDone.call(_this);
             onDone = function(){};
         }
-    }
+    }*/
 
     elem.do(function(currEl){
         if (currEl.getAttribute("sjlforeach") || currEl.getAttribute("sjlforin"))
@@ -1494,6 +1494,8 @@ SJL.extend("__processLoops", function(onDone, attributesToElements){
 });
 
 SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
+
+    //add some attributes to the element "currEl"
     if (attributesToElements)
     {
         for (var tempA in attributesToElements)
@@ -1504,135 +1506,160 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
 
     //get the attribute value
     var attributeValue = currEl.getAttribute("sjlforeach") || currEl.getAttribute("sjlforin");
-    var iteratorName = "i";
-    var parentOfCurrEl = currEl.parentNode;
-
-
-
-    if (attributeValue.split(' ')[1] == 'in')
+    if (attribute && attribute != null)
     {
-        iteratorName = attributeValue.split(' ')[0];
-        attributeValue = attributeValue.substr(attributeValue.indexOf(' in ')+4);
-    }
+        //determine a default iterator name
+        var iteratorName = "i";
+        var parentOfCurrEl = currEl.parentNode;
 
 
-    //eval the attribute value
-    var value = "";
-    try {
-        value = (function(){return eval(attributeValue);}).call(currEl);
-    }
-    catch(e)
-    {
-        //console.error("Error during eval in", attributeValue, e);
-    }
-
-
-    //removes attribute from element (to prevent a new call of foreach for curren element)
-    currEl.removeAttribute("sjlforeach");
-    currEl.removeAttribute("sjlforin");
-
-    //get currEl as text
-    var elementHtml = currEl.outerHTML;
-
-    //scrols through the 'value' items
-    var index = -1;
-    for (var valueI in value)
-    {
-        index ++;
-        var currValue = value[valueI];
-        eval("var "+iteratorName + " = currValue");
-        eval("var "+iteratorName + "Index = index");
-        var iteratorIsAnObject = typeof(currValue) == "object";
-
-        
-        //take a copy of the text
-        var copy = elementHtml;
-
-        //replace values
-        while (true){
-            try{
-                //backup foreach inside elements
-                var startPos = copy.indexOf("{{");
-                if (startPos > -1){
-                    var endPos = copy.indexOf("}}");
-
-                    var toEval = copy.substr(startPos+2, endPos-(startPos+2));
-                    var toReplace = copy.substr(startPos, endPos-startPos+2);
-                    var backup = false;
-                    var evalResult = "";
-                    //if (toEval.trim().indexOf(iteratorName) > -1)
-                    {
-
-                        try{
-                            //if the iterator is a object, allow to user this as ther self index
-                            if (iteratorIsAnObject && toEval == iteratorName)
-                            {
-                                evalResult = index;
-                            }
-                            else{
-                                //var evalResult = (function(){ return eval(toEval)}).call(currEl);
-                                var func = function(){
-                                    eval("evalResult = "+toEval);
-                                };
-                                func.call(currEl);
-                                if (typeof (evalResult) == 'undefined' || evalResult == null)
-                                {
-                                    backup = true;
-                                }
-                            }
-
-                        }
-                        catch (e){
-                            backup = true;
-                        }
-                    }
-                    //else
-                    //    backup = true;
-
-                    if (backup)
-                    {
-                        copy = copy.replace("{{", "__backOpen__");
-                        copy = copy.replace("}}", "__backClose__");
-                    }
-                    else
-                    {
-                        //toReplace = toReplace.
-                        //    replace(/\-/g, '\\-').
-                        //    replace(/[/]/g, '\\/').
-                        //    replace(/\./g, '\\.').
-                        //    replace(/\\/g, '\\\\').
-                        //    replace(/\*/g, '\\*').
-                        //    replace(/\+/g, '\\+').
-                        //    replace(/\?/g, '\\?').
-                        //    replace(/\|/g, '\\|');
-
-                        //copy = copy.replace(new RegExp(toReplace, 'g'), evalResult);
-                        copy = copy.split(toReplace).join(evalResult);
-                    }
-                }
-                else
-                    break;
-            }
-            catch(e)
-            {
-                console.error("SJLForEach error: ", e);
-                break;
-            }
+        //checks by an interrator sugested name
+        if (attributeValue.split(' ')[1] == 'in')
+        {
+            iteratorName = attributeValue.split(' ')[0];
+            attributeValue = attributeValue.substr(attributeValue.indexOf(' in ')+4);
         }
 
-        //restore [[ and ]]
-        copy = copy.replace(new RegExp("__backOpen__", 'g'), "{{").replace(new RegExp("__backClose__", 'g'), '}}');
-        //add the new html to parent of currEl
-        var tempElement = document.createElement("span");
-        tempElement.innerHTML = copy;
-        var tempSJL = $(tempElement.childNodes[0]);
-        parentOfCurrEl.insertBefore(tempElement.childNodes[0], currEl);
-        tempSJL.__processLoops(function(){}, attributesToElements);
-        delete tempElement;
-        
+        //removes attribute from element (to prevent a new call of foreach for curren element)
+        currEl.removeAttribute("sjlforeach");
+        currEl.removeAttribute("sjlforin");
+
+        //get currEl as text
+        var elementHtml = currEl.outerHTML;
+
+        //uses the SJL.class_array_looper to monitor the array, insertind, updating and deleting elements dinamically
+        var foreachControl = new SJL.class_array_looper(function(){
+            //this funcitons returns the observed array
+            return (function(){return eval(attributeValue);}).call(currEl);
+        }, function(currValue, index, act){
+            //this functions is called when the array (or some arrya item) is changed
+            if (act == 'deleted')
+            {
+                //find the currentElement using the index (used the childsIndexing created at 'inserted' act)
+                var oldElement = parentOfCurrEl.childsIndexing[index];
+                //delete the old element from html
+                oldElement.parentNode.removeChild(oldElement);
+                //remove the indexing from the childsIndexing array
+                parentOfCurrEl.childsIndexing[index].splice(index, 1);
+            }
+            else
+            {
+
+                eval("var "+iteratorName + " = currValue");
+                eval("var "+iteratorName + "Index = index");
+                var iteratorIsAnObject = typeof(currValue) == "object";
+            
+                //take a copy of the currEl text
+                var copy = elementHtml;
+
+                //replace values
+                while (true){
+                    try{
+                        //backup foreach inside elements
+                        var startPos = copy.indexOf("{{");
+                        if (startPos > -1){
+                            var endPos = copy.indexOf("}}");
+
+                            var toEval = copy.substr(startPos+2, endPos-(startPos+2));
+                            var toReplace = copy.substr(startPos, endPos-startPos+2);
+                            var backup = false;
+                            var evalResult = "";
+                            //if (toEval.trim().indexOf(iteratorName) > -1)
+                            {
+
+                                try{
+                                    //if the iterator is a object, allow to user this as ther self index
+                                    if (iteratorIsAnObject && toEval == iteratorName)
+                                    {
+                                        evalResult = index;
+                                    }
+                                    else{
+                                        //var evalResult = (function(){ return eval(toEval)}).call(currEl);
+                                        var func = function(){
+                                            eval("evalResult = "+toEval);
+                                        };
+                                        func.call(currEl);
+                                        if (typeof (evalResult) == 'undefined' || evalResult == null)
+                                        {
+                                            backup = true;
+                                        }
+                                    }
+
+                                }
+                                catch (e){
+                                            backup = true;
+                                }
+                            }
+                        
+                            if (backup)
+                            {
+                                copy = copy.replace("{{", "__backOpen__");
+                                copy = copy.replace("}}", "__backClose__");
+                            }
+                            else
+                            {
+                                //toReplace = toReplace.
+                                //    replace(/\-/g, '\\-').
+                                //    replace(/[/]/g, '\\/').
+                                //    replace(/\./g, '\\.').
+                                //    replace(/\\/g, '\\\\').
+                                //    replace(/\*/g, '\\*').
+                                //    replace(/\+/g, '\\+').
+                                //    replace(/\?/g, '\\?').
+                                //    replace(/\|/g, '\\|');
+
+                                //copy = copy.replace(new RegExp(toReplace, 'g'), evalResult);
+                                copy = copy.split(toReplace).join(evalResult);
+                            }
+                        }
+                        else
+                            break;
+                    }
+                    catch(e)
+                    {
+                        console.error("SJLForEach error: ", e);
+                        break;
+                    }
+                }
+
+                //restore [[ and ]]
+                copy = copy.replace(new RegExp("__backOpen__", 'g'), "{{").replace(new RegExp("__backClose__", 'g'), '}}');
+                //add the new html to parent of currEl
+                var tempElement = document.createElement("span");
+                tempElement.innerHTML = copy;
+                var tempSJL = $(tempElement.childNodes[0]);
+                tempElement.childNodes[0]._array_loop_currIndex = index;
+                
+                
+                
+                if (act == 'inserted')
+                {
+                    //Creates an array with the indexing of children by index to facilitate finding changes and exclusions
+                    parentOfCurrEl.childsIndexing = parentOfCurrEl.childsIndexing || [];
+                    parentOfCurrEl.childsIndexing[index] = tempElement.childNodes[0];
+                    parentOfCurrEl.appendChild(tempElement.childNodes[0]);
+                }
+                else if (act == 'updated')
+                {
+                    //find the currentElement using the index (used the childsIndexing created at 'inserted' act)
+                    var oldElement = parentOfCurrEl.childsIndexing[index];
+                    //insert the new element before
+                    parentOfCurrEl.insertBefore(tempElement.childNodes[0], oldElement);
+                    //update the childsIndexing array
+                    parentOfCurrEl.childsIndexing[index] = tempElement.childNodes[0];
+                    //delete the old element from html
+                    oldElement.parentNode.removeChild(oldElement);
+                }
+
+                tempSJL.__processLoops(function(){}, attributesToElements);
+
+                delete tempElement;
+            }
+
+        });
+        //remove currEl from his parent
+        currEl.parentNode.removeChild(currEl);
     }
-    currEl.parentNode.removeChild(currEl);
-    //remove currEl from his parent
     onDone.call(this);
 });
 
@@ -2408,4 +2435,95 @@ if ( !Array.prototype.forEach ) {
         }
     };
 }
+//#endregion
+
+//#region auxiliar types and classes
+    //this class monitores an array and call the 'on' function when some element is changed
+    //this class is used in the SJL ProcessLoops function
+    SJL.class_array_looper = function(array, _func_, _ctx_)
+    {
+        this._arr = array
+        this._on = _func_ || function(index, item, action){};
+        this._onCtx = _ctx_ || window;
+        this._running = true;
+        this._oldVec = [];
+
+        this.on =  function(func, ctx){
+            this._on = func;
+            this._onCtx = ctx || window;
+        }
+
+        this.start = function(){
+            this._sjlWatch = new SJL.Watch();
+
+            //start monitoring the size of element
+            var _this = this;
+            this._interval = setInterval(function(){
+                _this._work();
+            }, _SJL._watchInterval);
+
+            this._work();
+        }
+
+        this.stop = function(){
+            this.running = false;
+        }
+
+        this._process = function(element, index, action){
+            try{
+                console.log("Curr action = ", action);
+                this._on.call(this._onCtx, element, index, action);
+            }
+            catch(e){
+                console.error("Error in SJL Array Looper (processing the external event): ", e, this);
+                this.stop();
+            }
+        }
+
+        this._work = function(){
+            try{
+                if (this._running){
+
+                    var tmpArr = this._arr;
+                    if (this._arr.constructor == Function)
+                        tmpArr = this._arr.call(this._onCtx);
+                    else if (this._arr.constructor == String)
+                        tmpArr = (function(){return eval(this._arr)}).call(this._onCtx);
+
+                    //checks if the size of vector as decreased
+                    if (tmpArr.length < this._oldVec.length)
+                    {
+                        for (var c = tmpArr.length; c < this._oldVec.length; c++)
+                        {
+                            this._process(JSON.parse(this._oldVec[c], c), 'deleted');
+                            this._oldVec.pop();
+                        }
+
+                        
+                    }
+
+                    //checks by changes in the values
+                    tmpArr.forEach(function(currE, index){
+                        if (index >=this._oldVec.length)
+                        {
+                            this._process(currE, index, 'inserted');
+                            this._oldVec.push(JSON.stringify(currE));
+                        }
+                        else if (JSON.stringify(currE) != this._oldVec[index])
+                        {
+                            this._process(currE, index, 'changed');
+                            this._oldVec[index] = JSON.stringify(currE);
+                        }
+                    }, this);
+
+                }
+                else
+                    clearInterval(this._interval);
+            }
+            catch(e){
+                console.error("Error in SJL Array Looper: ", e, this);
+                clearInterval(this._interval);
+            }
+        }
+    }
 //#endregion
