@@ -2526,4 +2526,111 @@ if ( !Array.prototype.forEach ) {
             }
         }
     }
+    //this class allow processing whitout freezes the browser. This function was writed to be used 
+    //in critical and automation process and we do not recomend to use it in websites or apps.
+    SJL.Processor = function(workingCallback, _context_, _max_browser_time_lock_)
+    {
+        //by default, the browser must be locked during 30 milliseconds
+        this._max_browser_time_lock = _max_browser_time_lock_ || 30; 
+
+        this._currJobsByCycle = 1;
+        this._running = false;
+        this._callback = workingCallback || function(){};
+        this._context = _context_ || null;
+        this._delayBetweenTasksLots = 0;
+        this._work = function(callback, ctx)
+        {
+            var sDate = new Date();
+            //console.log("this._currJobsByCycle", this._currJobsByCycle);
+            for (var c =0; c < this._currJobsByCycle; c++)
+            {
+                if (this._running)
+                    callback.call(ctx, this);
+                else
+                    break;
+            }
+            var eDate = new Date();
+            var totalTime = eDate - sDate;
+            if (totalTime == 0)
+                totalTime = 1;
+            
+            //adjust the currJobsByCycle
+
+            this._currJobsByCycle = this._max_browser_time_lock / (totalTime/this._currJobsByCycle)
+
+            if (this._currJobsByCycle < 0)
+                this._currJobsByCycle = 1;
+            else if (this._currJobsByCycle == Infinity)
+                this._currJobsByCycle = 100000;
+
+            if (this._running){
+                setTimeout(function(_this){
+                    _this._work(callback, ctx);
+                }, this._delayBetweenTasksLots, this);
+            }
+        }
+
+        this.start = function(callback, _context_){
+            if (!this._running)
+            {
+                this._running = true;
+                this._work(callback || this._callback, _context_ || this._context);
+            }
+            else
+                throw ("SJL.Processor: already exists a running job. Please, stop it before call 'start'");
+        }
+
+        this.stop = function(){
+            this._running = false;
+        }
+        
+        this.isRunnin = function(){
+            return this._running;
+        }
+
+        this.processArray = function(array, _callback_, _onEndCallback_, _context_)
+        {
+            _callback_ = _callback_ || this._callback;
+            var i = 0;
+            this.start(function(_this){
+                if (i < array.length)
+                {
+                    _callback_(array[i], i, _this);
+                    i++;
+                }
+                else
+                {
+                    _this.stop();
+                    if (_onEndCallback_)
+                        _onEndCallback_(i, _this)
+                }
+
+            }, _context_);
+        }
+
+        this.processFor = function(from, to, _callback_, _onEndCallback_, _context_)
+        {
+            _callback_ = _callback_ || this._callback;
+            var i = from;
+            this.start(function(_this){
+                if (i < to)
+                {
+                    _callback_(i++, _this);
+                }
+                else
+                {
+                    _this.stop();
+                    if (_onEndCallback_)
+                        _onEndCallback_(i, _this)
+                }
+
+            }, _context_);
+        }
+
+        if (workingCallback)
+        {
+            this.start(workingCallback);
+        }
+    }
+
 //#endregion
