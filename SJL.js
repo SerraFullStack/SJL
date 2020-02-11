@@ -34,7 +34,8 @@
 
             for (c in this.elements)
             {
-                func.call(_context_, this.elements[c], _context_, _args_);
+                if (!Object.prototype.hasOwnProperty(c))
+                    func.call(_context_, this.elements[c], _context_, _args_);
             }
 
             return this;
@@ -44,7 +45,7 @@
         //the function bellow is used to add to new object same methods of element in "this.elements" list
         this._importElementsPoperties = function()
         {
-           for (var index in this.elements)
+        /*   for (var index in this.elements)
             {
                 //creat a global pointer for this _SJL instance
                 var globalName = "window.__SJL_"+this.getId();
@@ -73,7 +74,7 @@
                         }
                     }
                 }
-            }
+            }*/
         };
         
         /** Returns an unique ID */
@@ -122,20 +123,23 @@
                 selector = [selector];
 
         
-            for (var c in this.elements)
-            {
-                var currEl2 = this.elements[c];
+            this.do(function(currEl2){
 				for (var propIndex in selector)
 				{
 					var currSelector = selector[propIndex];
                     //request the elements from DOM
-                    var nodeList = currEl2.querySelectorAll(currSelector);
+                    
+                    var nodeList = [];
+                    try{
+                        nodeList = currEl2.querySelectorAll(currSelector);
+                    }
+                    catch{}
 
                     //scrolls throught the elements and add its to "vector" array
                     for (var c = 0; c < nodeList.length; c++)
                         vector.push(nodeList[c]);
                 };
-            }
+            });
 			
 			if (disableUpdate)
 			{
@@ -195,7 +199,11 @@
             else if ((currSelector != null) && (currSelector != "")){
 
                 //request the elements from DOM
-                var nodeList = document.querySelectorAll(currSelector);
+                var nodeList = [];
+                try{
+                    nodeList = document.querySelectorAll(currSelector);
+                }
+                catch{}
 
                 //scrolls throught the elements and add its to "vector" array
                 for (var c = 0; c < nodeList.length; c++)
@@ -234,30 +242,28 @@
 
 //#region animations and show and hide functions
 SJL.extend("hide", function(){
-    for (var c in this.elements)
-    {
+    this.do(function(element){
         //save the original display property to be used by the "show" method
-        this.elements[c].__oldDisplay = this.elements[c].style.display || null;
-        this.elements[c].style.display = "none";
-    }
+        element.__oldDisplay = element.style.display || null;
+        element.style.display = "none";
+    });
 
     return this;
 });
 
 SJL.extend("show", function(){
-    for (var c in this.elements)
-    {
+    this.do(function(element){
         //checks if the "hide" method saved the style property
-        if (this.elements[c].hasOwnProperty("__oldDisplay") && this.elements[c].__oldDisplay != null && this.elements[c].__oldDisplay != "none")
+        if (element.hasOwnProperty("__oldDisplay") && element.__oldDisplay != null && element.__oldDisplay != "none")
         {
-            this.elements[c].style.display = this.elements[c].__oldDisplay;
-            delete this.elements[c].__oldDisplay;
+            element.style.display = element.__oldDisplay;
+            delete element.__oldDisplay;
         }
         else
         {
-            this.elements[c].style.display = "block";
+            element.style.display = "block";
         }
-    }
+    });
 
     return this;
 });
@@ -620,6 +626,10 @@ SJL.extend(["include", "loadScript", "script", "require", "import"], function (s
     var dones = scriptsSrc.length;
     for (var c in scriptsSrc)
     {
+        //checks if c is a Object.prototype extension
+        if (Object.prototype.hasOwnProperty(c))
+            continue;
+            
         var type = "text/javascript";
         if (scriptsSrc[c].toLowerCase().indexOf(".css") == scriptsSrc[c].length-4)
             type = "text/css";
@@ -987,10 +997,7 @@ SJL.extend(["includeComponent", "loadStaticComponent"], function (htmlName, onLo
 /** Sets the value or */
 SJL.extend("setValue", function (data, autoLoadComponents_default_false) {
 	autoLoadComponents_default_false = autoLoadComponents_default_false || false;
-    for (var c in this.elements)
-    {
-        var curr = this.elements[c];
-
+    this.do(function(curr){
         if (typeof(curr.value) != 'undefined') {
             if (data.constructor === Array)
                 curr.value = data[c];
@@ -1020,21 +1027,20 @@ SJL.extend("setValue", function (data, autoLoadComponents_default_false) {
             else
                 continueProcess.call(this, curr);
         }
-    }
+    });
 
     return this;
 });
 
 SJL.extend("getValue", function () {
     var ret = [];
-    for (var c in this.elements)
-    {
+    this.do (function(curr){
         var curr = this.elements[c];
         if (typeof(curr.value) != 'undefined')
             ret.push(curr.value);
         else
             ret.push(curr.innerHTML);
-    }
+    });
 
     if (ret.length == 0)
         return null;
@@ -1506,7 +1512,7 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
 
     //get the attribute value
     var attributeValue = currEl.getAttribute("sjlforeach") || currEl.getAttribute("sjlforin");
-    if (attribute && attribute != null)
+    if (attributeValue && attributeValue != null)
     {
         //determine a default iterator name
         var iteratorName = "i";
@@ -1526,6 +1532,7 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
 
         //get currEl as text
         var elementHtml = currEl.outerHTML;
+
 
         //uses the SJL.class_array_looper to monitor the array, insertind, updating and deleting elements dinamically
         var foreachControl = new SJL.class_array_looper(function(){
@@ -1598,16 +1605,6 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
                             }
                             else
                             {
-                                //toReplace = toReplace.
-                                //    replace(/\-/g, '\\-').
-                                //    replace(/[/]/g, '\\/').
-                                //    replace(/\./g, '\\.').
-                                //    replace(/\\/g, '\\\\').
-                                //    replace(/\*/g, '\\*').
-                                //    replace(/\+/g, '\\+').
-                                //    replace(/\?/g, '\\?').
-                                //    replace(/\|/g, '\\|');
-
                                 //copy = copy.replace(new RegExp(toReplace, 'g'), evalResult);
                                 copy = copy.split(toReplace).join(evalResult);
                             }
@@ -1659,7 +1656,9 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
         });
         //remove currEl from his parent
         currEl.parentNode.removeChild(currEl);
+        foreachControl.start();
     }
+
     onDone.call(this);
 });
 
@@ -1879,22 +1878,21 @@ SJL.extend("setProperty", function (name, value, _try_set_attribute_) {
     if (_try_set_attribute_ == "defValue")
         _try_set_attribute_ = true;
 
-    for (var c in this.elements)
-    {
+    this.do(function(curr){
         if (_try_set_attribute_ == true)
         {
-            if (this.elements[c].getAttribute(name) != null)
+            if (curr.getAttribute(name) != null)
             {
                 //load a new activity
                 if (name.toLowerCase() == "sjlload")
-                    SJL._parseAcNameAndArgsAndLoad(this.elements[c], value, function(){}, this);
+                    SJL._parseAcNameAndArgsAndLoad(curr, value, function(){}, this);
                 else
-                    this.elements[c].setAttribute(name, value);
+                    curr.setAttribute(name, value);
             }
         }
             
-        eval("this.elements[c]." + name + " = value;");
-    }
+        eval("curr." + name + " = value;");
+    });
 
     return this;
 });
@@ -1904,32 +1902,30 @@ SJL.extend("setAttribute", function (name, value, _try_set_property_) {
     if (_try_set_property_ == "defValue")
     _try_set_property_ = true;
 
-    for (var c in this.elements)
-    {
+    this.do(function(curr){
 
         if (name.toLowerCase() == "sjlload")
         {
             //load a new activity
-            SJL._parseAcNameAndArgsAndLoad(this.elements[c], value, function(){}, this);
+            SJL._parseAcNameAndArgsAndLoad(curr, value, function(){}, this);
         }
         else{
             if (_try_set_property_ == true)
-            if (this.elements[c].hasOwnProperty(name))
-                eval("this.elements[c]."+name+" = value;");
+            if (curr.hasOwnProperty(name))
+                eval("curr."+name+" = value;");
             
-            this.elements[c].setAttribute(name, value);
+            curr.setAttribute(name, value);
         }
-    }
+    });
 
     return this;
 });
 
 SJL.extend("getAttribute", function (name) {
     var ret = [];
-    for (var c in this.elements)
-    {
-        ret.push(this.elements[c].getAttribute(name));
-    }
+    this.do(function(curr){
+        ret.push(curr.getAttribute(name));
+    });
 
     if (ret.length > 1)
         return ret;
@@ -1950,16 +1946,16 @@ SJL.extend("getAttribute", function (name) {
 SJL.extend("getProperty", function (name, _defaultValue_) {
     _defaultValue_ = _defaultValue_ || null;
     var ret = [];
-    for (var c in this.elements) {
+    this.do(function(curr){
         eval("if ("+
-            "this.elements[c]."+name+"){"+
-                "ret.push(this.elements[c]." + name + ");"+
+            "curr."+name+"){"+
+                "ret.push(curr." + name + ");"+
             "} "+
-            "else if (this.elements[c].attributes['"+name+"']){"+
-                "ret.push(this.elements[c].getAttribute('"+name+"'));"+
+            "else if (curr.attributes['"+name+"']){"+
+                "ret.push(curr.getAttribute('"+name+"'));"+
             "}"
         );
-    }
+    });
 
     if (ret.length == 1)
         return ret[0];
@@ -1970,19 +1966,20 @@ SJL.extend("getProperty", function (name, _defaultValue_) {
 });
 
 SJL.extend("setCssProperty", function (property, value) {
-    for (var c in this.elements)
-        this.elements[c].style.setProperty(property, value);
+    this.do(function(curr){
+        curr.style.setProperty(property, value);
+    });
 
     return this;
 });
 
 SJL.extend("getCssProperty", function (property, _defaultValue_) {
     var ret = [];
-    for (var c in this.elements) {
-        var value = this.elements[c].style.getPropertyValue(property);
+    this.do(function(curr){
+        var value = curr.style.getPropertyValue(property);
 
         ret.push(value);
-    }
+    });
 
     if ((ret.length == 1) && (ret[0] != ""))
         return ret[0];
@@ -1994,10 +1991,10 @@ SJL.extend("getCssProperty", function (property, _defaultValue_) {
 
 /** Remove elements from their parent */
 SJL.extend(["remove", "exclude"], function () {
-    for (var c in this.elements) {
-        this.elements[c].parentNode.removeChild(this.elements[c]);
-        delete this.elements[c];
-    }
+    this.do(function(curr){
+        curr.parentNode.removeChild(curr);
+        delete curr;
+    });
 
     return this;
 
@@ -2013,13 +2010,11 @@ SJL.extend(["remove", "exclude"], function () {
 SJL.extend("getComputedCssProperty", function(propertyName, _defaultValue_){
     _defaultValue_ = _defaultValue_ || null;
     var result = [];
-    for (var c in this.elements)
-    {
-        var tempElement = this.elements[c];
+    this.do(function(tempElement){
         var value = null;
         eval ("value = window.getComputedStyle(tempElement)."+propertyName);
         result.push(value);
-    }
+    });
 
     if (result.length == 1)
         return result[0];
@@ -2180,17 +2175,36 @@ SJL.extend(["bindAttribute"], function(evalAddress, attributeName, addressContex
 //function returns true, the callback will be called
 SJL.extend(["wait"], function(evalcodeOrFunction, callback, _context_, _checkInterval_){
     var _checkInterval_ = _checkInterval_ || 10;
-    console.log("wait called");
     var waiter = setInterval(function(){
         var temp = null;
         try{
             if (typeof(evalcodeOrFunction) == "function")
                 temp = evalcodeOrFunction.call(_context_);
+            else if (evalcodeOrFunction.constructor == Array)
+            {
+                temp = evalcodeOrFunction.length > 0;
+                
+                evalcodeOrFunction.forEach(function(curr){
+                    if (curr.constructor == Function)
+                    {
+                        temp ==  temp && curr.call(_context_);
+                    }
+                    else
+                    {
+                        var temp2 = eval(curr);
+                        if (temp2)
+                            temp &= temp && true;
+                        else
+                            temp = false;
+                    }
+                });
+            }
             else
                 temp = eval(evalcodeOrFunction); 
         }
         catch(e){
             //console.error("error in SJL.wait: ", e);
+            temp = false;
         }
 
         if (
@@ -2495,7 +2509,7 @@ if ( !Array.prototype.forEach ) {
                     {
                         for (var c = tmpArr.length; c < this._oldVec.length; c++)
                         {
-                            this._process(JSON.parse(this._oldVec[c], c), 'deleted');
+                            this._process(JSON.parse(this._oldVec[c]), c, 'deleted');
                             this._oldVec.pop();
                         }
 
@@ -2526,6 +2540,8 @@ if ( !Array.prototype.forEach ) {
             }
         }
     }
+
+
     //this class allow processing whitout freezes the browser. This function was writed to be used 
     //in critical and automation process and we do not recomend to use it in websites or apps.
     SJL.Processor = function(workingCallback, _context_, _max_browser_time_lock_)
@@ -2538,6 +2554,8 @@ if ( !Array.prototype.forEach ) {
         this._callback = workingCallback || function(){};
         this._context = _context_ || null;
         this._delayBetweenTasksLots = 0;
+        this._cumulativeTime = 0;
+        this._ciclesCount = 0;
         this._work = function(callback, ctx)
         {
             var sDate = new Date();
@@ -2545,18 +2563,25 @@ if ( !Array.prototype.forEach ) {
             for (var c =0; c < this._currJobsByCycle; c++)
             {
                 if (this._running)
+                {
+                    this._ciclesCount ++;
                     callback.call(ctx, this);
+                }
                 else
                     break;
             }
             var eDate = new Date();
             var totalTime = eDate - sDate;
+
+            this._cumulativeTime += totalTime;
+
+
             if (totalTime == 0)
                 totalTime = 1;
             
             //adjust the currJobsByCycle
 
-            this._currJobsByCycle = this._max_browser_time_lock / (totalTime/this._currJobsByCycle)
+            this._currJobsByCycle = this._max_browser_time_lock / (this._cumulativeTime/this._ciclesCount);
 
             if (this._currJobsByCycle < 0)
                 this._currJobsByCycle = 1;
@@ -2632,5 +2657,4 @@ if ( !Array.prototype.forEach ) {
             this.start(workingCallback);
         }
     }
-
 //#endregion
