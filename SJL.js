@@ -2500,101 +2500,98 @@ if ( !Array.prototype.forEach ) {
 
 //Very very basic promise implementation for browses that not support it by default. This contains only the 
 //code that allow SJL to work when Promises is not availe (SJL uses promises in somewhere).
+
+
+
+//stack de callbask + stack de respostas
 if (typeof(Promise) == 'undefined')
 {
     Promise = function(callback)
     {
-        var _this = this;
-        this._then = function(){};
-        this._rj = function(){}
-        this._called = false;
-        this._calledSucess = false;
-        this._calledCtx = null;
-        this._calledArgs = [];
-        this._catch = null;
-        this._catchE = null;
+        this._currResult = {}
+        this._thens = [];
+        this._catch = {fcn: null, args: null};
+        this._
 
         this.then = function(callback, rjCallback){
-            this._then = callback;
-            this._rj = rjCallback;
-            try{
-                if (this._called){
-                    if (this._calledSucess)
-                    {
-                        callback.apply(this._calledCtx, this._calledArgs);
-
-                    }
-                    else
-                    {
-                        rjCallback.apply(this._calledCtx, this._calledArgs);
-
-                        if (this._catch)
-                            this._catch(e);
-                    }
-                }
-            }
-            catch(e){
-                _this._called = true;
-                this._catchE = e;
-                if (this._catch)
-                    this._catch(e);
-
-                if (rjCallback)
-                {
-                    rjCallback(e);
-                    this._calledArgs = [nextThenData];
-                }
-                
-            }
+            this._thens.push({ac: callback, rj: rjCallback});
+            this._runNextThen();
 
             return this;
         };
 
         this.catch = function(callback){
-            this._catch = callback;
-
-            if (this._called)
-                callback(this._catchE);
-
-            return this;
+            this._catch.fcn = callback;
+            if (this._catch.args)
+                this._catch.fcn.apply(this, this._catch.args);
         }
 
-        this._callbg = function(_callback){
-            this._called = false;
-            this._calledSucess = false;
-            this._calledCtx = null;
-            this._calledArgs = [];
-            this._catch = null;
-            this._catchE = null;
-
+        this._runNextThen = function(){
             try{
-                _callback(function(){
-                    _this._called = true;
-                    _this._calledCtx = this;
-                    _this._calledArgs = arguments;
-                    _this._calledSucess = true;
-                    _this.then(_this._then, _this._rj);
-                }, function(){
-                    _this._called = true;
-                    _this._calledCtx = this;
-                    _this._calledArgs = arguments;
-                    _this._calledSucess = false;
-                    _this.then(_this._then, _this._rj);
-                });
+                var _this = this;
+                if (this._currResult.status == "toRun"){
+                    this._currResult.status = "pending";
+                    this._currResult.fcn(function(){
+                        this._currResult.status = "ok";
+                        this._currResult.result.sucess = true;
+                        this._currResult.result.args = arguments;
+                        this._runNextThen();
+                    }.bind(this), function(){
+                        this._currResult.status = "ok";
+                        this._currResult.result.args = arguments;
+                        this._currResult.result.sucess = false;
+                        this._runNextThen();
+                    }.bind(this));
+                }
+                else{
+                    if (this._thens.length > 0)
+                    {
+                        if (this._currResult.status == "ok")
+                        {
+                            var currThen = this._thens[0];
+                            this._thens.splice(0, 1);
+
+                            if (this._currResult.result.sucess)
+                                var result = currThen.ac.apply(this, this._currResult.result.args);
+                            else
+                                var result = currThen.rj.apply(this, this._currResult.result.args);
+
+                            if (result){
+                                if (result.constructor.name == this.constructor.name){
+                                    this._currResult.status = "pending";
+                                    result.then(function(){
+                                        this._currResult.status = "ok";
+                                        this._currResult.result.sucess = true;
+                                        this._currResult.result.args = arguments;
+                                        this._runNextThen();
+                                    }.bind(this), function(){
+                                        this._currResult.status = "ok";
+                                        this._currResult.result.sucess = false;
+                                        this._currResult.result.args = arguments;
+                                        this._runNextThen();
+                                    }.bind(this));
+                                }
+                                else{
+                                    this._currResult.status = "ok";
+                                    this._currResult.result.sucess = true;
+                                    this._currResult.result.args = [result];
+                                    this._runNextThen();
+                                }
+                            }
+                            this._runNextThen();
+                        }
+                    }
+                }
             }
             catch(e){
-                _this._called = true;
-                this._catchE = e;
-                if (this._catch)
-                    this._catch(e);
-
-                if (this._rj)
-                    rjCallback(this._rj);
-                //else
-                //    throw(e);
+                this._catch.args = [e];
+                if (this._catch.fcn)
+                    this._catch.fcn.apply(this, this._catch.args);
             }
         };
-        this._callbg(callback);
+        
+        this._currResult = {fcn: callback, status: "toRun", result: {sucess: false, returned: null, args: []}};
+        this._runNextThen();
     }
 }
 //#endregion
