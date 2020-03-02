@@ -34,8 +34,7 @@
 
             for (c in this.elements)
             {
-                if (!Object.prototype.hasOwnProperty(c))
-                    func.call(_context_, this.elements[c], _context_, _args_);
+                func.call(_context_, this.elements[c], _context_, _args_);
             }
 
             return this;
@@ -45,7 +44,7 @@
         //the function bellow is used to add to new object same methods of element in "this.elements" list
         this._importElementsPoperties = function()
         {
-        /*   for (var index in this.elements)
+           for (var index in this.elements)
             {
                 //creat a global pointer for this _SJL instance
                 var globalName = "window.__SJL_"+this.getId();
@@ -74,7 +73,7 @@
                         }
                     }
                 }
-            }*/
+            }
         };
         
         /** Returns an unique ID */
@@ -123,23 +122,20 @@
                 selector = [selector];
 
         
-            this.do(function(currEl2){
+            for (var c in this.elements)
+            {
+                var currEl2 = this.elements[c];
 				for (var propIndex in selector)
 				{
 					var currSelector = selector[propIndex];
                     //request the elements from DOM
-                    
-                    var nodeList = [];
-                    try{
-                        nodeList = currEl2.querySelectorAll(currSelector);
-                    }
-                    catch{}
+                    var nodeList = currEl2.querySelectorAll(currSelector);
 
                     //scrolls throught the elements and add its to "vector" array
                     for (var c = 0; c < nodeList.length; c++)
                         vector.push(nodeList[c]);
                 };
-            });
+            }
 			
 			if (disableUpdate)
 			{
@@ -199,11 +195,7 @@
             else if ((currSelector != null) && (currSelector != "")){
 
                 //request the elements from DOM
-                var nodeList = [];
-                try{
-                    nodeList = document.querySelectorAll(currSelector);
-                }
-                catch{}
+                var nodeList = document.querySelectorAll(currSelector);
 
                 //scrolls throught the elements and add its to "vector" array
                 for (var c = 0; c < nodeList.length; c++)
@@ -242,28 +234,30 @@
 
 //#region animations and show and hide functions
 SJL.extend("hide", function(){
-    this.do(function(element){
+    for (var c in this.elements)
+    {
         //save the original display property to be used by the "show" method
-        element.__oldDisplay = element.style.display || null;
-        element.style.display = "none";
-    });
+        this.elements[c].__oldDisplay = this.elements[c].style.display || null;
+        this.elements[c].style.display = "none";
+    }
 
     return this;
 });
 
 SJL.extend("show", function(){
-    this.do(function(element){
+    for (var c in this.elements)
+    {
         //checks if the "hide" method saved the style property
-        if (element.hasOwnProperty("__oldDisplay") && element.__oldDisplay != null && element.__oldDisplay != "none")
+        if (this.elements[c].hasOwnProperty("__oldDisplay") && this.elements[c].__oldDisplay != null && this.elements[c].__oldDisplay != "none")
         {
-            element.style.display = element.__oldDisplay;
-            delete element.__oldDisplay;
+            this.elements[c].style.display = this.elements[c].__oldDisplay;
+            delete this.elements[c].__oldDisplay;
         }
         else
         {
-            element.style.display = "block";
+            this.elements[c].style.display = "block";
         }
-    });
+    }
 
     return this;
 });
@@ -626,10 +620,6 @@ SJL.extend(["include", "loadScript", "script", "require", "import"], function (s
     var dones = scriptsSrc.length;
     for (var c in scriptsSrc)
     {
-        //checks if c is a Object.prototype extension
-        if (Object.prototype.hasOwnProperty(c))
-            continue;
-            
         var type = "text/javascript";
         if (scriptsSrc[c].toLowerCase().indexOf(".css") == scriptsSrc[c].length-4)
             type = "text/css";
@@ -735,17 +725,12 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
                     componentName = componentName.replace(/\./g, "/");
                     componentName = componentName.replace(/\-/g, "/");
                     componentName = componentName.replace(/\:/g, "/");
-                    globalName = currElement;
-
-                    //character ^ can be used as a work arround to not-case-sensity of xhtml
-                    while (componentName.indexOf('^') > -1)
-                    {
-                        var p1 = componentName.substr(0, componentName.indexOf('^'));
-                        var p2 = componentName.substr(componentName.indexOf('^')+1);
-                        p2 = p2[0].toUpperCase() + p2.substr(1);
-                        componentName = p1 + p2;
-                    }
+                globalName = currElement;
+                    console.log("Found sjl component tag: "+componentName);
                 }
+
+                
+                
 
 
             if (componentName == null)
@@ -798,217 +783,209 @@ SJL.extend(["autoLoadComponents", "loadComponentsFromTags"], function(element, o
 });
 
 SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHtml, _context_, _onLoadArguments_, _discardCssAndJs_, autoLoadComponents_default_true)
-{   
-    return new Promise(function(ac, rj){
-        onload = ac;
-        if (typeof(autoLoadComponents_default_true) == 'undefined')
-            autoLoadComponents_default_true = true;
+{
+    if (typeof(autoLoadComponents_default_true) == 'undefined')
+        autoLoadComponents_default_true = true;
 
-        onLoad = onLoad || null;
+    onLoad = onLoad || null;
 
-        if ((typeof(_clearHtml_) == 'undefined') || (_clearHtml_ == true))
-        {
-            this.setProperty("innerHTML", "");
-        }
+    if ((typeof(_clearHtml_) == 'undefined') || (_clearHtml_ == true))
+    {
+        this.setProperty("innerHTML", "");
+    }
 
-        var processeds = 0;
+    var processeds = 0;
 
-        this.do(function(c){
-            var nHtml = htmlText;
+    this.do(function(c){
+        var nHtml = htmlText;
 
-            try{
-                if ((nHtml.indexOf("__rnd__") > -1) || ((nHtml.indexOf("__uid__") > -1)))
-                {
-                    if (!SJL.hasOwnProperty("UniqueIdCount"))
-                    {
-                        SJL.UniqueIdCount = 1;
-                    }
+		try{
+			if ((nHtml.indexOf("__rnd__") > -1) || ((nHtml.indexOf("__uid__") > -1)))
+			{
+				if (!SJL.hasOwnProperty("UniqueIdCount"))
+				{
+					SJL.UniqueIdCount = 1;
+				}
 
-                    var rep = "uid"+SJL.UniqueIdCount;
-                    SJL.UniqueIdCount++;
+				var rep = "uid"+SJL.UniqueIdCount;
+				SJL.UniqueIdCount++;
 
-                    nHtml =nHtml.replace(/__rnd__/g, rep).replace(/__uid__/g, rep);
+				nHtml =nHtml.replace(/__rnd__/g, rep).replace(/__uid__/g, rep);
 
-                    //if have random data in scripts and css, the system could not ignore a new css and javascript text
-                    _discardCssAndJs_ = false; 
-                }
-                //the argument _discardCssAndJs_ can be used to prevend excessive css and javascript loading (when components are loading)
+				//if have random data in scripts and css, the system could not ignore a new css and javascript text
+				_discardCssAndJs_ = false; 
+			}
+			//the argument _discardCssAndJs_ can be used to prevend excessive css and javascript loading (when components are loading)
 
-                if (typeof (_discardCssAndJs_) == 'undefined')
-                    _discardCssAndJs_ = false;
+			if (typeof (_discardCssAndJs_) == 'undefined')
+				_discardCssAndJs_ = false;
 
-                //try put any header in heaer
-                var temp = document.createElement("div");
-                temp.innerHTML = nHtml;
-            } catch(e){console.log("SJL LoadHtmlText(",nHtml,") Exception: ", e);}
-                
-            
-            var scripts = $(temp).$("script").do(function (currEl) {
-                if (!_discardCssAndJs_)
-                {
-                    try{
-                        if (currEl.getAttribute("SJLEnable"))
-                        {
-                            var parse = false;
-                            eval ("parse = "+currEl.getAttribute("SJLEnable"));
-                            if ("1true".indexOf(parse) > -1)
-                                eval(currEl.innerHTML);
-                            else
-                                currEl.parentNode.removeChild(currEl); 
-                        }
-                        else
-                            eval(currEl.innerHTML);
-                    }
-                    catch(err){
-                        console.error(err);
-                    }
-                }   
-                currEl.parentNode.removeChild(currEl); 
-            });
-
-            var css = $(temp).$("style").do(function (currEl) {
-                if (!_discardCssAndJs_) {
+			//try put any header in heaer
+			var temp = document.createElement("div");
+			temp.innerHTML = nHtml;
+		} catch(e){console.log("SJL LoadHtmlText(",nHtml,") Exception: ", e);}
+			
+        
+        var scripts = $(temp).$("script").do(function (currEl) {
+            if (!_discardCssAndJs_)
+			{
+                try{
                     if (currEl.getAttribute("SJLEnable"))
                     {
                         var parse = false;
                         eval ("parse = "+currEl.getAttribute("SJLEnable"));
                         if ("1true".indexOf(parse) > -1)
-                            document.head.appendChild(currEl);
+                            eval(currEl.innerHTML);
                         else
-                            currEl.parentNode.removeChild(currEl);
+                            currEl.parentNode.removeChild(currEl); 
                     }
                     else
+                        eval(currEl.innerHTML);
+				}
+				catch(err){
+					console.error(err);
+				}
+            }   
+            currEl.parentNode.removeChild(currEl); 
+        });
+
+        var css = $(temp).$("style").do(function (currEl) {
+            if (!_discardCssAndJs_) {
+                if (currEl.getAttribute("SJLEnable"))
+                {
+                    var parse = false;
+                    eval ("parse = "+currEl.getAttribute("SJLEnable"));
+                    if ("1true".indexOf(parse) > -1)
                         document.head.appendChild(currEl);
+                    else
+                        currEl.parentNode.removeChild(currEl);
                 }
                 else
-                currEl.parentNode.removeChild(currEl);
-            });
-            
-            delete scripts;
-            delete css;
-
-            nHtml = temp.innerHTML;
-            
-            //checks if to be clear the html
-                
-            c.innerHTML += nHtml;
-            var _this = this;
-            if (autoLoadComponents_default_true == true)
-            {
-                _this.__processLoops(function(){
-                    _this.autoLoadComponents(c, function(){
-                        processeds++;
-                        if (processeds == _this.elements.length)
-                        {
-                            if (onLoad != null)
-                            {
-                                onLoad.call(_context_ || this, htmlText, _this, _onLoadArguments_);
-                            }
-
-                            ac.call(_context_ || this, htmlText, _this, _onLoadArguments_);
-
-                            if (c.getAttribute("onload") != null)
-                            {
-                                eval(c.getAttribute("onload"));
-                            }
-                        }
-                    }, _this);
-                }, null);
+                    document.head.appendChild(currEl);
             }
-            else{
-                if (onLoad != null)
-                {
-                    if (onLoad != null)
-                    {
-                        onLoad.call(_context_ || this, htmlText, _this, _onLoadArguments_);
-                    }
-
-                    ac.call(_context_ || this, htmlText, _this, _onLoadArguments_);
-                }
-            }
+            else
+               currEl.parentNode.removeChild(currEl);
         });
-    }.bind(this));
+		
+		delete scripts;
+		delete css;
+
+        nHtml = temp.innerHTML;
+        
+        //checks if to be clear the html
+            
+        c.innerHTML += nHtml;
+        var _this = this;
+        if (autoLoadComponents_default_true == true)
+        {
+            _this.__processLoops(function(){
+                _this.autoLoadComponents(c, function(){
+                    processeds++;
+                    if (processeds == _this.elements.length)
+                    {
+                        if (onLoad != null)
+                        {
+                            onLoad.call(_context_ || _this, htmlText, _this, _onLoadArguments_);
+                        }
+
+                        if (c.getAttribute("onload") != null)
+                        {
+                            eval(c.getAttribute("onload"));
+                        }
+                    }
+                }, _this);
+            }, null);
+        }
+        else{
+            if (onLoad != null)
+            {
+                onLoad.call(_context_ || _this, htmlText, _this, _onLoadArguments_);
+            }
+        }
+    });
+    //onLoad.call(_context_ || this, htmlText, this, _onLoadArguments_);
+    
+    
 });
 
 _SJL.alreadyImportedCSS ={};
 _SJL.alreadyImportedJavascript ={};
 SJL.extend(["loadHtml", "setHtml"], function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_, autoLoadComponents_default_true) {
-    return new Promise(function(ac, rj){
-        if (!SJL.hasOwnProperty("_loadedComponents"))
-            SJL._loadedComponents = [];
+    if (!SJL.hasOwnProperty("_loadedComponents"))
+        SJL._loadedComponents = [];
+    
+    this.cacheOrGet(htmlName, function (result, adicionalArgs,  request) {
+        if (!request || ((request.status >= 200) && (request.status < 300))) {    
 
-        this.cacheOrGet(htmlName, function (result, adicionalArgs,  request) {
-            if (!request || ((request.status >= 200) && (request.status < 300))) {    
-
-                //if javascript and css already imported, discart them
-                var discartJsCss = true;
-                if (!_SJL.alreadyImportedCSS[htmlName] || !_SJL.alreadyImportedJavascript[htmlName])
-                {
-                    discartJsCss = false;
-                    _SJL.alreadyImportedCSS[htmlName] = true;
-                    _SJL.alreadyImportedJavascript[htmlName] = true;
-                }
-                this.loadHtmlText(result, function(){
-                    onLoad.apply(_context_ || this, arguments);
-                    ac.apply(_context_ || this, arguments);
-                }, _clearHtml_, _context_, _onLoadArguments_, discartJsCss, autoLoadComponents_default_true);
-            }
-            else
+            //if javascript and css already imported, discart them
+            var discartJsCss = true;
+            if (!_SJL.alreadyImportedCSS[htmlName] || !_SJL.alreadyImportedJavascript[htmlName])
             {
-                if (_onFailure_)
-                    _onFailure_.call (_context_ || this, request);
-                    
-                rj.call(_context_ || this, new Error(request));
+                discartJsCss = false;
+                _SJL.alreadyImportedCSS[htmlName] = true;
+                _SJL.alreadyImportedJavascript[htmlName] = true;
             }
-        }, this, null, _progressCallback_);
-    }.bind(this));
+
+            this.loadHtmlText(result, onLoad, _clearHtml_, _context_, _onLoadArguments_, discartJsCss, autoLoadComponents_default_true);
+        }
+        else
+        {
+            if (_onFailure_)
+                _onFailure_.call (_context_ || this, request);
+        }
+    }, this, null, _progressCallback_);
+    
+
+    return this;
 });
 
 //the function bellow can be used to create a cache to functions like 'loadApp' and 'loadComponents'
 SJL.extend(["preloadHtml", "preload"], function (htmlFileName, onDone, _context_, _progressCallback_) {
 
-    return new Promise(function(ac, rj){
-        if (htmlFileName.constructor !== Array)
-            htmlFileName = [htmlFileName];
+    if (htmlFileName.constructor !== Array)
+        htmlFileName = [htmlFileName];
 
-        var loading = 0;
-        for (var c = 0; c < htmlFileName.length; c++) 
+    var loading = 0;
+    for (var c = 0; c < htmlFileName.length; c++) 
+    {
+    
+        loading++;
+        if ((htmlFileName[c].indexOf(".htm") == -1) && htmlFileName[c].indexOf(".js") == -1 && htmlFileName[c].indexOf(".css") == -1)
         {
-        
-            loading++;
-            if ((htmlFileName[c].indexOf(".htm") == -1) && htmlFileName[c].indexOf(".js") == -1 && htmlFileName[c].indexOf(".css") == -1)
-            {
-                htmlFileName[c] += ".html";
-            }
-            
-            //load the html file    
-            this.cacheOrGet(htmlFileName[c], function (result, contAtt, xhr) 
-            {
-                SJL._loadedComponents.push({ htmlName: htmlFileName[contAtt], htmlContent: result, alreadyLoaded: false });
-                loading--;
-
-                if ((loading == 0) && (onDone))
-                {
-                    onDone.call(_context_ || this);
-                }
-                ac.call(_context_ || this);
-
-            }, this, c, _progressCallback_);
+            htmlFileName[c] += ".html";
         }
-    }.bind(this));
+        
+        //load the html file    
+        this.cacheOrGet(htmlFileName[c], function (result, contAtt, xhr) 
+        {
+            SJL._loadedComponents.push({ htmlName: htmlFileName[contAtt], htmlContent: result, alreadyLoaded: false });
+            loading--;
+
+            if ((loading == 0) && (onDone))
+            {
+                onDone.call(_context_ || this);
+            }
+
+        }, this, c, _progressCallback_);
+    }
+
+    return this;
 });
 
-//this method just load the component file and parse Javascript. No class instance isdone
-SJL.extend(["includeComponent", "loadStaticComponent"], function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
+
+/*SJL.extend(["loadComponent", "loadStaticComponent"], function (htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
     if (htmlName.indexOf(".htm") == -1)
         htmlName += ".html";
     return this.loadHtml(htmlName, onLoad, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
-});
+});*/
 
 /** Sets the value or */
 SJL.extend("setValue", function (data, autoLoadComponents_default_false) {
 	autoLoadComponents_default_false = autoLoadComponents_default_false || false;
-    this.do(function(curr){
+    for (var c in this.elements)
+    {
+        var curr = this.elements[c];
+
         if (typeof(curr.value) != 'undefined') {
             if (data.constructor === Array)
                 curr.value = data[c];
@@ -1038,20 +1015,21 @@ SJL.extend("setValue", function (data, autoLoadComponents_default_false) {
             else
                 continueProcess.call(this, curr);
         }
-    });
+    }
 
     return this;
 });
 
 SJL.extend("getValue", function () {
     var ret = [];
-    this.do (function(curr){
+    for (var c in this.elements)
+    {
         var curr = this.elements[c];
         if (typeof(curr.value) != 'undefined')
             ret.push(curr.value);
         else
             ret.push(curr.innerHTML);
-    });
+    }
 
     if (ret.length == 0)
         return null;
@@ -1062,439 +1040,409 @@ SJL.extend("getValue", function () {
 });
 
 SJL.extend(["unloadApp", "unloadActivity", "unloadActiveComponent"], function (onUnload, _context_, _args_, _clearHtml_) {
-    return new Promise(function(ac, rj){
-        var app = this.elements[0].SJL_CurrAPP;
-        var elementP = this.elements[0];
-        var _this = this;
-        _args_ = _args_ || null;
-        if (typeof(_clearHtml_) == 'undefined')
-            _clearHtml_ = true;
-            
-        if (app != null)
+
+    var app = this.elements[0].SJL_CurrAPP;
+    var elementP = this.elements[0];
+    var _this = this;
+    _args_ = _args_ || null;
+    if (typeof(_clearHtml_) == 'undefined')
+        _clearHtml_ = true;
+        
+    if (app != null)
+    {
+        if (typeof(app.destructor) != 'undefined')
+            app.destructor();
+        if (typeof(app.stop) != 'undefined')
+            app.stop();
+        if (typeof(app.release) != 'undefined')
+            app.release();
+        if (typeof(app.free) != 'undefined')
+            app.free();
+        if (typeof(app.destroy) != 'undefined')
+            app.destroy();
+
+        //dispose needs thats a callback is called to continue
+        if (typeof(app.dispose) != 'undefined') //(app.hasOwnProperty("dispose"))
         {
-            if (typeof(app.destructor) != 'undefined')
-                app.destructor();
-            if (typeof(app.stop) != 'undefined')
-                app.stop();
-            if (typeof(app.release) != 'undefined')
-                app.release();
-            if (typeof(app.free) != 'undefined')
-                app.free();
-            if (typeof(app.destroy) != 'undefined')
-                app.destroy();
-
-            //dispose needs thats a callback is called to continue
-            if (typeof(app.dispose) != 'undefined') //(app.hasOwnProperty("dispose"))
-            {
-                var _this = this;
-                app.dispose(function(){
-                    elementP.SJL_CurrAPP = null;
-                    delete elementP.SJL_CurrAPP;
-                    if (_clearHtml_)
-                        elementP.innerHTML = "";
-
-                    if (onUnload)
-                        onUnload.call(_context_ || _this, _args_);
-                    ac.call(_context_ || _this, _args_);
-                });
-            }
-            else
-            {
+            var _this = this;
+            app.dispose(function(){
                 elementP.SJL_CurrAPP = null;
                 delete elementP.SJL_CurrAPP;
                 if (_clearHtml_)
-                        elementP.innerHTML = "";
+                    elementP.innerHTML = "";
 
                 if (onUnload)
-                    onUnload.call(_context_ || this, _args_);
-                ac.call(_context_ || this, _args_);
-            }
+                    onUnload.call(_context_ || _this, _args_);
+            });
         }
         else
-        {   
+        {
             elementP.SJL_CurrAPP = null;
             delete elementP.SJL_CurrAPP;
             if (_clearHtml_)
-                elementP.innerHTML = "";
-                
+                    elementP.innerHTML = "";
+
             if (onUnload)
                 onUnload.call(_context_ || this, _args_);
-            ac.call(_context_ || this, _args_);
         }
-    }.bind(this));
+    }
+    else
+    {   
+        elementP.SJL_CurrAPP = null;
+        delete elementP.SJL_CurrAPP;
+        if (_clearHtml_)
+            elementP.innerHTML = "";
+            
+        if (onUnload)
+            onUnload.call(_context_ || this, _args_);
+    }
 });
 /** This method load an html named [appName].html and automaticaly instanciate an javascript class named [appName].
  * Is very similiar to loadComponent, but with de advantage of auto instanciate the class.
  */
 SJL.extend(["loadApp", "loadActivity", "loadActiveComponent"], function (appName, onLoad, appArgumentsArray, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_) {
-    return new Promise(function(ac, rj){
-        //checks by old running app and notify them	
-        if ((this.elements[0].hasOwnProperty("SJL_CurrAPP") && this.elements[0].SJL_CurrAPP != null))
-        {
-            this.unloadApp(function(){
-                this.loadApp(appName, function(){
-                    onLoad.apply(this || _context_, arguments);
-                    ac.apply(this || _context_, arguments);
-                }, appArgumentsArray, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
-            }, this);
-            return;
-        }
-        var elementsBackup = this.elements;
-        var appSPointer = this;
+	//checks by old running app and notify them	
+	if ((this.elements[0].hasOwnProperty("SJL_CurrAPP") && this.elements[0].SJL_CurrAPP != null))
+	{
+        this.unloadApp(function(){
+            this.loadApp(appName, onLoad, appArgumentsArray, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_);
+        }, this);
+        return;
+    }
+    
+    var elementsBackup = this.elements;
+    var appSPointer = this;
 
-        /*If there is any content in the innerHTML of the container element, this content 
-        will be sent to an attribute called "content". Below, the "content" property will
-        be created (or set if it already exists) in the new object (appInstance) and, if
-        it exists, the setContent method of this same object will be executed with this
-        innerHTML as a paramete....*/
+    /*If there is any content in the innerHTML of the container element, this content 
+    will be sent to an attribute called "content". Below, the "content" property will
+    be created (or set if it already exists) in the new object (appInstance) and, if
+    it exists, the setContent method of this same object will be executed with this
+    innerHTML as a paramete....*/
+    //{
+        //convert innerHTML to an attribute, to be sented to appInstance
+        appSPointer.do(function(curr){ //(curr) => {
+            if (curr.innerHTML.trim().length > 0)
+            {
+                curr.setAttribute("content", curr.innerHTML);
+            }
+        });
+    //}
+
+	this.loadHtml(appName + ".html", function () {
+        var appInstance = null;
+        appArgumentsArray = appArgumentsArray || null;
+
+        //create a reference to appSPointer in appInstance (create a new SJL, ignoring the use of pool,
+        //i.e., creating a permanent instance)
+        var fixAppSPointer = $(appSPointer.elements, true);
+
+        //if this method has called with '/' at end of appName, remove them
+        if (appName.indexOf("/") > 0) {
+            appName = appName.split('/');
+            appName = appName[appName.length - 1];
+        }
+
+        //create a new instance of component javascript class
+        eval('if (typeof(' + appName + ') != "undefined"){ appInstance = new ' + appName +'(fixAppSPointer, appArgumentsArray);}else{console.log("SJL could not locate the class \'"+appName+"\'");}');
+        
+        //create a pointer to appIntance in the appIntance as SJL_currApp. This will be used at possible
+        //next object load to destroy the instance (look at start of this function)
+        appSPointer.setProperty("SJL_CurrAPP", appInstance);
+		try{
+			appInstance.controlledElement = appSPointer.elements[0];
+		}
+		catch(e){
+			console.error(e);
+		}
+        
+        //to facilitate the development, create some more references to the new instance of the component
+        //(one of which is with the class name in camelCase)
         //{
-            //convert innerHTML to an attribute, to be sented to appInstance
-            appSPointer.do(function(curr){ //(curr) => {
-                if (curr.innerHTML.trim().length > 0)
-                {
-                    curr.setAttribute("content", curr.innerHTML);
+            var camelizedAppName = appName[0].toLowerCase() + (appName.length > 1 ? appName.substring(1) : ""); 
+
+            //create references in the container element
+		    appSPointer.setProperty(appName, appInstance);
+            appSPointer.setProperty(appName + "Instance", appInstance);
+		    appSPointer.setProperty(camelizedAppName, appInstance);
+			
+			
+			//create pointer too in a property called javascript
+			//{
+				var jsApps = appSPointer.getProperty("javascript");
+				if (!jsApps)
+				{
+					jsApps = {};
+				}
+			
+				eval ("jsApps."+appName+" = appName");
+				eval ("jsApps."+appName + "Instance = appName");
+				eval ("jsApps."+camelizedAppName+" = appName");
+			
+				appSPointer.setProperty('javascript', jsApps);
+			//}
+		
+            //Now, it creates some references to the new instance of the component in child elements.
+            //This  will  allow  events (such as onclick, onouseover, ontouchstart, ...) to be easily
+            //accessed by HTML (eg: <div onclick = "componentCamelCaseName.Method)
+            appSPointer.$("*").do(function(currEl){ //currEl) => {
+                eval ("currEl."+appName+"=appInstance");
+                eval ("currEl."+appName+"Instance=appInstance");
+				
+				//add a reference in the "javascript" property"
+				eval ("if (!currEl.javascript){ currEl.javascript ={}}; currEl.javascript."+appName+"=appInstance");
+				
+                //create a camelized name
+                eval ("currEl."+camelizedAppName+"=appInstance");
+				
+            
+                if (!currEl.app){
+                    //don't set appInstance property, because it is used by SJL to destroy activities.
+                    //If you use appInstance here and try to load a component inside the elements of appSPointer, the curren appInstance will be destroyed (the desctructor function will be called);
+                    currEl.ctrl = appInstance;
+                    currEl.app = appInstance;
                 }
+				
+            });
+        //}
+        
+        //Just as references to the new object were created in the HTML elements, references to the
+        //container element in the new object are created below.
+        //{
+            if (appInstance && !appInstance.rootS){
+    			appInstance.sRoot = fixAppSPointer;
+                appInstance.rootS = fixAppSPointer;
+                appInstance.html = fixAppSPointer;
+                appInstance.body = fixAppSPointer;
+                appInstance.containerSElement = fixAppSPointer;
+                eval("appInstance." + camelizedAppName +"=fixAppSPointer")
+
+            }
+        //}
+
+        /*//Now, to help further the development, in the container element (only in the container element)
+        //are  created methods with the same names of the methods of the new object. This way it is easy
+        //to  call  methods of the new object, just take the container element and call the methodo with
+        //the same name. These methods will redirect execution into the new object.
+        //{
+            //get methods defineds in the contructor
+			if (appInstance){
+				var appInstanceMethods = Object.getOwnPropertyNames(appInstance).filter(function (p) {
+					return typeof appInstance[p] === 'function';
+				});
+
+				//get methods  defineds with  prototype
+				var filtred = Object.getOwnPropertyNames(Object.getPrototypeOf(appInstance)).filter(function (p) {
+					return typeof appInstance[p] === 'function';
+				});
+				for (var currProp in filtred)
+				{
+					var curr = filtred[currProp];
+					appInstanceMethods.push(curr);
+				};
+
+			
+
+				fixAppSPointer.appInstance = appInstance;
+				for (var currProp in appInstanceMethods)
+				{
+					var currMethod = appInstanceMethods[currProp];
+					
+					eval ('appSPointer.setProperty("'+currMethod+'", function(){'+
+						'this.' + camelizedAppName + '.' + currMethod + '.call(this.' + camelizedAppName+', arguments);'+
+					'})');
+				}
+
+				appSPointer.setProperty("appInstanceMethods", appInstanceMethods);
+			}
+        //}*/
+
+
+        
+        //It now takes all the attributes of the container element and creates properties
+        //with  the  same  names and values in the new object (appIntance). Also check if 
+        //there  is  a  set method on the object, if it exists, call it with, sending the
+        //value by parameter
+        //{
+            SJL.__AttributeChanged = function(element, attribute, newValue){
+
+                var destinationInstance = element.SJL_CurrAPP;
+                
+                /*if (attribute == "active")
+                    eval("destinationInstance."+attribute +" = newValue");*/
+
+                var setName = "set" + attribute;
+
+                //get all method of instance
+                for (var currMethod in destinationInstance){
+                    //return typeof destinationInstance[p] === 'function';
+                    if (destinationInstance[currMethod] != null && typeof(destinationInstance[currMethod].constructor) == "function")
+                    {
+                        if (currMethod.toLowerCase() == setName.toLowerCase())
+                            destinationInstance[currMethod].call(destinationInstance, newValue, element, this);   
+                    }
+                };
+				
+                delete instanceMethods;
+            }
+
+            //hooks setAttribute and getAttribute  methods of elements
+            appSPointer.do(function(curr){
+                
+                if (!curr.__setAttribute)
+                {
+                    curr.__setAttribute = curr.setAttribute;
+                    
+                    
+                    curr.setAttribute = function(name, value, __dispatchActivityEvents__)
+                    {
+                        if (value != curr.getAttribute(name)){
+                            this.__setAttribute(name, value);
+
+                            //check if user is trying to change SJL attributes
+                            if (name.toLowerCase() == "sjlload")
+                            {
+                                //load a new activity
+                                SJL._parseAcNameAndArgsAndLoad(this, value, function(){}, this);
+                            }
+                            else{
+                                if (typeof(__dispatchActivityEvents__) == 'undefined')
+                                    __dispatchActivityEvents__ = true;
+
+                                if (__dispatchActivityEvents__ != false)
+                                {
+                                    /*  When an  activitiy is loaded (see the beginning of this method), the searches 
+                                    looks the root element for any html content. If something is found, SJL move that
+                                    content  to an attribute called "content". This attribute is sent to class of the
+                                    new activity in a for loop that is implemented bellow (out of current if). 
+                                    
+                                        But  there  is  one  thing  that  should  be  considered  here  (before  call
+                                    __AttributeChanged). __AttributeChanged uses the property 'SJL_CurrAPP', which is
+                                    a  reference  to class instance of new activity. When this 'content' attribute is
+                                    created  in  the root element (with its HTML content), the 'SJL_CurrAPP' property
+                                    (also   of   root   element)   is   not  yet  exists,  raising  an  exception  in
+                                    __AttributeChanged   event.  Therefore,  it  is  necessary  to  verify  that  the
+                                    'SJL_CurrAPP'  property  already  exists in the 'curr' element before calling SJL
+                                    method '__AttributeChanged'.*/
+                                    try{
+                                        if (this.SJL_CurrAPP)
+                                            SJL.__AttributeChanged(this, name, value);
+                                    }catch (e) {
+                                        console.log("Error setting attribute ", name, " with value ", value, " to element ", this, ":", e);
+                                    }
+                                }
+                            }
+                        }
+                    };
+                }
+
+                var attributes = curr.attributes;
+                for (var cAttribute = 0; cAttribute < attributes.length; cAttribute++)
+                {
+                    var currAttribute = attributes[cAttribute];
+                    
+                    SJL.__AttributeChanged.call(window, curr, currAttribute.name, currAttribute.value);
+                }
+
+
+                if (!curr.__getAttribute)
+                {
+                    curr.__getAttribute = curr.getAttribute;
+                    
+                    
+                    curr.getAttribute = function(name, __dispatchActivityEvents__)
+                    {
+
+                        if (typeof(__dispatchActivityEvents__) == 'undefined')
+                            __dispatchActivityEvents__ = true;
+
+                        if (__dispatchActivityEvents__ != false)
+                        {
+                            try{
+                                if (this.SJL_CurrAPP){
+                                    var destinationInstance = this.SJL_CurrAPP;
+                                    var getName = "get" + name;
+                                        
+                                    var appInstanceMethods = [];
+                                    for (var currMethod in destinationInstance){
+                                        
+                                        //return typeof destinationInstance[p] === 'function';
+                                        if (destinationInstance[currMethod] != null && typeof(destinationInstance[currMethod].constructor) == "function")
+                                        {
+                                            if (currMethod.toLowerCase() == getName.toLowerCase())
+                                                return destinationInstance[currMethod].call(destinationInstance, this);   
+                                        }
+                                    };
+
+
+                                    return this.__getAttribute(name);
+                                }
+                            }catch (e) {
+                                console.log("Error getting attribute ", name, " from element ", this, ":", e);
+                            }
+                        }
+                        else
+                            return this.__getAttribute(name);
+                    };
+                }
+
             });
         //}
 
-        var _thiss = this;
-        this.loadHtml(appName + ".html", function () {
-            var appInstance = null;
-            appArgumentsArray = appArgumentsArray || null;
+        
+        var continueStart = function(){
 
-            //create a reference to appSPointer in appInstance (create a new SJL, ignoring the use of pool,
-            //i.e., creating a permanent instance)
-            var fixAppSPointer = $(appSPointer.elements, true);
-
-            //if this method has called with '/' at end of appName, remove them
-            if (appName.indexOf("/") > 0) {
-                appName = appName.split('/');
-                appName = appName[appName.length - 1];
-            }
-
-            //create a new instance of component javascript class
-            eval('if (typeof(' + appName + ') != "undefined"){ appInstance = new ' + appName +'(fixAppSPointer, appArgumentsArray);}else{console.log("SJL could not locate the class \'"+appName+"\'");}');
             
-            //create a pointer to appIntance in the appIntance as SJL_currApp. This will be used at possible
-            //next object load to destroy the instance (look at start of this function)
-            appSPointer.setProperty("SJL_CurrAPP", appInstance);
-            try{
-                appInstance.controlledElement = appSPointer.elements[0];
-            }
-            catch(e){
-                console.error(e);
-            }
-            
-            //to facilitate the development, create some more references to the new instance of the component
-            //(one of which is with the class name in camelCase)
-            //{
-                var camelizedAppName = appName[0].toLowerCase() + (appName.length > 1 ? appName.substring(1) : ""); 
+            delete fixAppSPointer;
+            //parse SJLLoops
+            var attributesForDynamicElements = {ctrl: appInstance, app: appInstance};
+            eval ("attributesForDynamicElements."+appName+"=appInstance");
+            eval ("attributesForDynamicElements."+appName+"Instance=appInstance");
+            eval ("attributesForDynamicElements.javascript ={"+appName+": appInstance}");
+            eval ("attributesForDynamicElements."+camelizedAppName+"=appInstance");
 
-                //create references in the container element
-                appSPointer.setProperty(appName, appInstance);
-                appSPointer.setProperty(appName + "Instance", appInstance);
-                appSPointer.setProperty(camelizedAppName, appInstance);
-                
-                
-                //create pointer too in a property called javascript
+            this.__processLoops(function(){
+                //try call new instance initilizers
                 //{
-                    var jsApps = appSPointer.getProperty("javascript");
-                    if (!jsApps)
-                    {
-                        jsApps = {};
-                    }
-                
-                    eval ("jsApps."+appName+" = appName");
-                    eval ("jsApps."+appName + "Instance = appName");
-                    eval ("jsApps."+camelizedAppName+" = appName");
-                
-                    appSPointer.setProperty('javascript', jsApps);
+                    /*if (typeof (appInstance.constructor) != 'undefined')
+                    appInstance.constructor();*/
+                    if (typeof (appInstance.initialize) != 'undefined')
+                        appInstance.initialize(appArgumentsArray);
+                    if (typeof (appInstance.start) != 'undefined')
+                        appInstance.start(appArgumentsArray);
+                    if (typeof (appInstance.create) != 'undefined')
+                        appInstance.create(appArgumentsArray);
                 //}
-            
-                //Now, it creates some references to the new instance of the component in child elements.
-                //This  will  allow  events (such as onclick, onouseover, ontouchstart, ...) to be easily
-                //accessed by HTML (eg: <div onclick = "componentCamelCaseName.Method)
-                appSPointer.$("*").do(function(currEl){ //currEl) => {
-                    eval ("currEl."+appName+"=appInstance");
-                    eval ("currEl."+appName+"Instance=appInstance");
+                //autoload child components
+                var processeds = 0;
+                var _this = this;
+                this.do(function(c){
                     
-                    //add a reference in the "javascript" property"
-                    eval ("if (!currEl.javascript){ currEl.javascript ={}}; currEl.javascript."+appName+"=appInstance");
-                    
-                    //create a camelized name
-                    eval ("currEl."+camelizedAppName+"=appInstance");
-                    
-                
-                    if (!currEl.app){
-                        //don't set appInstance property, because it is used by SJL to destroy activities.
-                        //If you use appInstance here and try to load a component inside the elements of appSPointer, the curren appInstance will be destroyed (the desctructor function will be called);
-                        currEl.ctrl = appInstance;
-                        currEl.app = appInstance;
-                    }
-                    
-                });
-            //}
-            
-            //Just as references to the new object were created in the HTML elements, references to the
-            //container element in the new object are created below.
-            //{
-                if (appInstance && !appInstance.rootS){
-                    appInstance.sRoot = fixAppSPointer;
-                    appInstance.rootS = fixAppSPointer;
-                    appInstance.html = fixAppSPointer;
-                    appInstance.body = fixAppSPointer;
-                    appInstance.containerSElement = fixAppSPointer;
-                    eval("appInstance." + camelizedAppName +"=fixAppSPointer")
-
-                }
-            //}
-
-            /*//Now, to help further the development, in the container element (only in the container element)
-            //are  created methods with the same names of the methods of the new object. This way it is easy
-            //to  call  methods of the new object, just take the container element and call the methodo with
-            //the same name. These methods will redirect execution into the new object.
-            //{
-                //get methods defineds in the contructor
-                if (appInstance){
-                    var appInstanceMethods = Object.getOwnPropertyNames(appInstance).filter(function (p) {
-                        return typeof appInstance[p] === 'function';
-                    });
-
-                    //get methods  defineds with  prototype
-                    var filtred = Object.getOwnPropertyNames(Object.getPrototypeOf(appInstance)).filter(function (p) {
-                        return typeof appInstance[p] === 'function';
-                    });
-                    for (var currProp in filtred)
-                    {
-                        var curr = filtred[currProp];
-                        appInstanceMethods.push(curr);
-                    };
-
-                
-
-                    fixAppSPointer.appInstance = appInstance;
-                    for (var currProp in appInstanceMethods)
-                    {
-                        var currMethod = appInstanceMethods[currProp];
-                        
-                        eval ('appSPointer.setProperty("'+currMethod+'", function(){'+
-                            'this.' + camelizedAppName + '.' + currMethod + '.call(this.' + camelizedAppName+', arguments);'+
-                        '})');
-                    }
-
-                    appSPointer.setProperty("appInstanceMethods", appInstanceMethods);
-                }
-            //}*/
-
-
-            
-            //It now takes all the attributes of the container element and creates properties
-            //with  the  same  names and values in the new object (appIntance). Also check if 
-            //there  is  a  set method on the object, if it exists, call it with, sending the
-            //value by parameter
-            //{
-                SJL.__AttributeChanged = function(element, attribute, newValue){
-
-                    var destinationInstance = element.SJL_CurrAPP;
-                    
-                    /*if (attribute == "active")
-                        eval("destinationInstance."+attribute +" = newValue");*/
-
-                    var setName = "set" + attribute.toLowerCase();
-
-                    //get all method of instance
-                    funcs = {};
-                    for (var currMethod in destinationInstance){
-                        if (destinationInstance[currMethod] != null && typeof(destinationInstance[currMethod].constructor) == "function")
-                            if (currMethod.toLowerCase() == setName)
-                                funcs[currMethod] = destinationInstance[currMethod];
-                    }
-
-                    //add ES6 class methods (JS for (.. in ..) can't looks ES6 class methods)
-                    Object.getOwnPropertyNames(destinationInstance.constructor.prototype).forEach(function(currMethod){
-                        if (destinationInstance[currMethod] != null && typeof(destinationInstance[currMethod].constructor) == "function")
-                            if (currMethod.toLowerCase() == setName && !funcs.hasOwnProperty(currMethod))
-                                funcs[currMethod] = destinationInstance[currMethod];
-                    });
-
-                    for (var currFunc in funcs)
-                    {
-                        funcs[currFunc].call(destinationInstance, newValue, element, this);   
-                    };
-                }
-
-                //hooks setAttribute and getAttribute  methods of elements
-                appSPointer.do(function(curr){
-                    
-                    if (!curr.__setAttribute)
-                    {
-                        curr.__setAttribute = curr.setAttribute;
-                        
-                        
-                        curr.setAttribute = function(name, value, __dispatchActivityEvents__)
+                    this.autoLoadComponents(c, function(){
+                        processeds++;
+                        if (processeds == _this.elements.length)
                         {
-                            //if (value != curr.getAttribute(name)){
-                                this.__setAttribute(name, value);
+                            //if there is a event called sjlonload on element, call them
+                            this.callEvent("sjlonload", {sjl: this, instance: appInstance});
+                            this.callEvent("onload", {sjl: this, instance: appInstance});
 
-                                //check if user is trying to change SJL attributes
-                                if (name.toLowerCase() == "sjlload")
-                                {
-                                    //load a new activity
-                                    SJL._parseAcNameAndArgsAndLoad(this, value, function(){}, this);
-                                }
-                                else{
-                                    if (typeof(__dispatchActivityEvents__) == 'undefined')
-                                        __dispatchActivityEvents__ = true;
-
-                                    if (__dispatchActivityEvents__ != false)
-                                    {
-                                        /*  When an  activitiy is loaded (see the beginning of this method), the searches 
-                                        looks the root element for any html content. If something is found, SJL move that
-                                        content  to an attribute called "content". This attribute is sent to class of the
-                                        new activity in a for loop that is implemented bellow (out of current if). 
-                                        
-                                            But  there  is  one  thing  that  should  be  considered  here  (before  call
-                                        __AttributeChanged). __AttributeChanged uses the property 'SJL_CurrAPP', which is
-                                        a  reference  to class instance of new activity. When this 'content' attribute is
-                                        created  in  the root element (with its HTML content), the 'SJL_CurrAPP' property
-                                        (also   of   root   element)   is   not  yet  exists,  raising  an  exception  in
-                                        __AttributeChanged   event.  Therefore,  it  is  necessary  to  verify  that  the
-                                        'SJL_CurrAPP'  property  already  exists in the 'curr' element before calling SJL
-                                        method '__AttributeChanged'.*/
-                                        try{
-                                            if (this.SJL_CurrAPP)
-                                                SJL.__AttributeChanged(this, name, value);
-                                        }catch (e) {
-                                            console.log("Error setting attribute ", name, " with value ", value, " to element ", this, ":", e);
-                                        }
-                                    }
-                                }
-                            //}
-                        };
-                    }
-
-                    var attributes = curr.attributes;
-                    for (var cAttribute = 0; cAttribute < attributes.length; cAttribute++)
-                    {
-                        var currAttribute = attributes[cAttribute];
-                        
-                        SJL.__AttributeChanged.call(window, curr, currAttribute.name, currAttribute.value);
-                    }
-
-
-                    if (!curr.__getAttribute)
-                    {
-                        curr.__getAttribute = curr.getAttribute;
-                        
-                        
-                        curr.getAttribute = function(name, __dispatchActivityEvents__)
-                        {
-
-                            if (typeof(__dispatchActivityEvents__) == 'undefined')
-                                __dispatchActivityEvents__ = true;
-
-                            if (__dispatchActivityEvents__ != false)
-                            {
-                                try{
-                                    if (this.SJL_CurrAPP){
-                                        var destinationInstance = this.SJL_CurrAPP;
-                                        var getName = "get" + name;
-                                            
-                                        var appInstanceMethods = [];
-                                        for (var currMethod in destinationInstance){
-                                            
-                                            //return typeof destinationInstance[p] === 'function';
-                                            if (destinationInstance[currMethod] != null && typeof(destinationInstance[currMethod].constructor) == "function")
-                                            {
-                                                if (currMethod.toLowerCase() == getName.toLowerCase())
-                                                    return destinationInstance[currMethod].call(destinationInstance, this);   
-                                            }
-                                        };
-
-
-                                        return this.__getAttribute(name);
-                                    }
-                                }catch (e) {
-                                    console.log("Error getting attribute ", name, " from element ", this, ":", e);
-                                }
-                            }
-                            else
-                                return this.__getAttribute(name);
-                        };
-                    }
-
+                            onLoad = onLoad || null;
+                            if (onLoad != null)
+                                onLoad.call(_context_ || appSPointer, appInstance, appSPointer, _onLoadArguments_);
+                        }
+                    }, this);
                 });
-            //}
-
-            var continueStart = function(){
-                delete fixAppSPointer;
-                //parse SJLLoops
-                var attributesForDynamicElements = {ctrl: appInstance, app: appInstance};
-                eval ("attributesForDynamicElements."+appName+"=appInstance");
-                eval ("attributesForDynamicElements."+appName+"Instance=appInstance");
-                eval ("attributesForDynamicElements.javascript ={"+appName+": appInstance}");
-                eval ("attributesForDynamicElements."+camelizedAppName+"=appInstance");
-                _thiss.__processLoops(function(){
-                    //try call new instance initilizers
-                    //{
-                        /*if (typeof (appInstance.constructor) != 'undefined')
-                        appInstance.constructor();*/
-                        try{
-                            if (typeof (appInstance.initialize) != 'undefined')
-                                appInstance.initialize(appArgumentsArray);
-                        }
-                        catch(e){ console.error("Error calling function 'initialize'  of " + appName + ": ", e);}
-
-                        try{
-                            if (typeof (appInstance.start) != 'undefined')
-                                appInstance.start(appArgumentsArray);
-                        }
-                        catch(e){ console.error("Error calling function 'start' of " + appName + ": ", e);}
-
-                        try{
-                            if (typeof (appInstance.create) != 'undefined')
-                                appInstance.create(appArgumentsArray);
-                        }
-                        catch(e){ console.error("Error calling function 'create' of " + appName + ": ", e);}
-                    //}
-                    //autoload child components
-                    var processeds = 0;
-
-                    _thiss.do(function(c){
-                        
-                        _thiss.autoLoadComponents(c, function(){
-                            processeds++;
-                            if (processeds == _thiss.elements.length)
-                            {
-                                //if there is a event called sjlonload on element, call them
-                                this.callEvent("sjlonload", {sjl: this, instance: appInstance});
-                                this.callEvent("onload", {sjl: this, instance: appInstance});
-
-                                onLoad = onLoad || null;
-                                if (onLoad != null)
-                                    onLoad.call(_context_ || appSPointer, appInstance, appSPointer, _onLoadArguments_);
-                                
-                                ac.call(_context_ || appSPointer, appInstance, appSPointer, _onLoadArguments_);
-                            }
-                        }, this);
-                    });
-                }, attributesForDynamicElements);
-            };
+            }, attributesForDynamicElements);
+        };
 
 
-            var _this = this;
-            if (typeof (appInstance.init) != 'undefined')
-                appInstance.init(function(){continueStart.call(_this);}, appArgumentsArray);
-            else
-                continueStart.call(this);
+        var _this = this;
+        if (typeof (appInstance.init) != 'undefined')
+            appInstance.init(function(){continueStart.call(_this);}, appArgumentsArray);
+        else
+            continueStart.call(this);
 
-        }, function(){
-            if (_onFailure_)
-                _onFailure_.apply(_context_ || this, arguments);
-            rj.apply(_context_ || this, arguments);
-
-        }, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_, false);
-    }.bind(this));
+	}, _onFailure_, _clearHtml_, _context_, _onLoadArguments_, _progressCallback_, false);
+    return this;
 });
 
 SJL.extend("__processLoops", function(onDone, attributesToElements){
@@ -1502,7 +1450,7 @@ SJL.extend("__processLoops", function(onDone, attributesToElements){
     var elem = this.$("*");
     var waiting = 0;
     var _this = this;
-    /*var waitingCheck = function (){
+    var waitingCheck = function (){
         waiting--;
         console.log(waiting);
         if (waiting <= 0)
@@ -1510,7 +1458,7 @@ SJL.extend("__processLoops", function(onDone, attributesToElements){
             onDone.call(_this);
             onDone = function(){};
         }
-    }*/
+    }
 
     elem.do(function(currEl){
         if (currEl.getAttribute("sjlforeach") || currEl.getAttribute("sjlforin"))
@@ -1529,8 +1477,6 @@ SJL.extend("__processLoops", function(onDone, attributesToElements){
 });
 
 SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
-
-    //add some attributes to the element "currEl"
     if (attributesToElements)
     {
         for (var tempA in attributesToElements)
@@ -1541,153 +1487,145 @@ SJL.extend("__processForeach", function(currEl, onDone, attributesToElements){
 
     //get the attribute value
     var attributeValue = currEl.getAttribute("sjlforeach") || currEl.getAttribute("sjlforin");
-    if (attributeValue && attributeValue != null)
+    var iteratorName = "i";
+    var parentOfCurrEl = currEl.parentNode;
+
+
+
+    if (attributeValue.split(' ')[1] == 'in')
     {
-        //determine a default iterator name
-        var iteratorName = "i";
-        var parentOfCurrEl = currEl.parentNode;
-
-
-        //checks by an interrator sugested name
-        if (attributeValue.split(' ')[1] == 'in')
-        {
-            iteratorName = attributeValue.split(' ')[0];
-            attributeValue = attributeValue.substr(attributeValue.indexOf(' in ')+4);
-        }
-
-        //removes attribute from element (to prevent a new call of foreach for curren element)
-        currEl.removeAttribute("sjlforeach");
-        currEl.removeAttribute("sjlforin");
-
-        //get currEl as text
-        var elementHtml = currEl.outerHTML;
-
-
-        //uses the SJL.class_array_looper to monitor the array, insertind, updating and deleting elements dinamically
-        var foreachControl = new SJL.class_array_looper(function(){
-            //this funcitons returns the observed array
-            return (function(){return eval(attributeValue);}).call(currEl);
-        }, function(currValue, index, act){
-            //this functions is called when the array (or some arrya item) is changed
-            if (act == 'deleted')
-            {
-                //find the currentElement using the index (used the childsIndexing created at 'inserted' act)
-                var oldElement = parentOfCurrEl.childsIndexing[index];
-                //delete the old element from html
-                oldElement.parentNode.removeChild(oldElement);
-                //remove the indexing from the childsIndexing array
-                parentOfCurrEl.childsIndexing[index].splice(index, 1);
-            }
-            else
-            {
-
-                eval("var "+iteratorName + " = currValue");
-                eval("var "+iteratorName + "Index = index");
-                var iteratorIsAnObject = typeof(currValue) == "object";
-            
-                //take a copy of the currEl text
-                var copy = elementHtml;
-
-                //replace values
-                while (true){
-                    try{
-                        //backup foreach inside elements
-                        var startPos = copy.indexOf("{{");
-                        if (startPos > -1){
-                            var endPos = copy.indexOf("}}");
-
-                            var toEval = copy.substr(startPos+2, endPos-(startPos+2));
-                            var toReplace = copy.substr(startPos, endPos-startPos+2);
-                            var backup = false;
-                            var evalResult = "";
-                            //if (toEval.trim().indexOf(iteratorName) > -1)
-                            {
-
-                                try{
-                                    //if the iterator is a object, allow to user this as ther self index
-                                    if (iteratorIsAnObject && toEval == iteratorName)
-                                    {
-                                        evalResult = index;
-                                    }
-                                    else{
-                                        //var evalResult = (function(){ return eval(toEval)}).call(currEl);
-                                        var func = function(){
-                                            eval("evalResult = "+toEval);
-                                        };
-                                        func.call(currEl);
-                                        if (typeof (evalResult) == 'undefined' || evalResult == null)
-                                        {
-                                            backup = true;
-                                        }
-                                    }
-
-                                }
-                                catch (e){
-                                            backup = true;
-                                }
-                            }
-                        
-                            if (backup)
-                            {
-                                copy = copy.replace("{{", "__backOpen__");
-                                copy = copy.replace("}}", "__backClose__");
-                            }
-                            else
-                            {
-                                //copy = copy.replace(new RegExp(toReplace, 'g'), evalResult);
-                                copy = copy.split(toReplace).join(evalResult);
-                            }
-                        }
-                        else
-                            break;
-                    }
-                    catch(e)
-                    {
-                        console.error("SJLForEach error: ", e);
-                        break;
-                    }
-                }
-
-                //restore [[ and ]]
-                copy = copy.replace(new RegExp("__backOpen__", 'g'), "{{").replace(new RegExp("__backClose__", 'g'), '}}');
-                //add the new html to parent of currEl
-                var tempElement = document.createElement("span");
-                tempElement.innerHTML = copy;
-                var tempSJL = $(tempElement.childNodes[0]);
-                tempElement.childNodes[0]._array_loop_currIndex = index;
-                
-                
-                
-                if (act == 'inserted')
-                {
-                    //Creates an array with the indexing of children by index to facilitate finding changes and exclusions
-                    parentOfCurrEl.childsIndexing = parentOfCurrEl.childsIndexing || [];
-                    parentOfCurrEl.childsIndexing[index] = tempElement.childNodes[0];
-                    parentOfCurrEl.appendChild(tempElement.childNodes[0]);
-                }
-                else if (act == 'updated')
-                {
-                    //find the currentElement using the index (used the childsIndexing created at 'inserted' act)
-                    var oldElement = parentOfCurrEl.childsIndexing[index];
-                    //insert the new element before
-                    parentOfCurrEl.insertBefore(tempElement.childNodes[0], oldElement);
-                    //update the childsIndexing array
-                    parentOfCurrEl.childsIndexing[index] = tempElement.childNodes[0];
-                    //delete the old element from html
-                    oldElement.parentNode.removeChild(oldElement);
-                }
-
-                tempSJL.__processLoops(function(){}, attributesToElements);
-
-                delete tempElement;
-            }
-
-        });
-        //remove currEl from his parent
-        currEl.parentNode.removeChild(currEl);
-        foreachControl.start();
+        iteratorName = attributeValue.split(' ')[0];
+        attributeValue = attributeValue.substr(attributeValue.indexOf(' in ')+4);
     }
 
+
+    //eval the attribute value
+    var value = "";
+    try {
+        value = (function(){return eval(attributeValue);}).call(currEl);
+    }
+    catch(e)
+    {
+        //console.error("Error during eval in", attributeValue, e);
+    }
+
+
+    //removes attribute from element (to prevent a new call of foreach for curren element)
+    currEl.removeAttribute("sjlforeach");
+    currEl.removeAttribute("sjlforin");
+
+    //get currEl as text
+    var elementHtml = currEl.outerHTML;
+
+    //scrols through the 'value' items
+    var index = -1;
+    for (var valueI in value)
+    {
+        index ++;
+        var currValue = value[valueI];
+        eval("var "+iteratorName + " = currValue");
+        eval("var "+iteratorName + "Index = index");
+        var iteratorIsAnObject = typeof(currValue) == "object";
+
+        
+        //take a copy of the text
+        var copy = elementHtml;
+
+        //replace values
+        while (true){
+            try{
+                //backup foreach inside elements
+                var startPos = copy.indexOf("{{");
+                if (startPos > -1){
+                    var endPos = copy.indexOf("}}");
+
+                    var toEval = copy.substr(startPos+2, endPos-(startPos+2));
+                    var toReplace = copy.substr(startPos, endPos-startPos+2);
+                    var backup = false;
+                    var evalResult = "";
+                    //if (toEval.trim().indexOf(iteratorName) > -1)
+                    {
+
+                        try{
+                            //if the iterator is a object, allow to user this as ther self index
+                            if (iteratorIsAnObject && toEval == iteratorName)
+                            {
+                                evalResult = index;
+                            }
+                            else{
+                                //var evalResult = (function(){ return eval(toEval)}).call(currEl);
+                                var func = function(){
+                                    eval("evalResult = "+toEval);
+                                };
+                                func.call(currEl);
+
+                                if (typeof (evalResult) == 'undefined' || evalResult == null)
+                                {
+                                    backup = true;
+                                }
+                                else if ((evalResult.constructor == Array || evalResult.constructor == Object))
+                                {
+                                    //if evalResult is an array or object, put a ref to it in a globalPOinter
+                                    var newId = SJL.getId();
+                                    eval ("window."+newId+" = evalResult");
+                                    evalResult = "window."+newId;
+                                }
+                            }
+
+                        }
+                        catch (e){
+                            backup = true;
+                        }
+                    }
+                    //else
+                    //    backup = true;
+
+                    if (backup)
+                    {
+                        copy = copy.replace("{{", "__backOpen__");
+                        copy = copy.replace("}}", "__backClose__");
+                    }
+                    else
+                    {
+                        //toReplace = toReplace.
+                        //    replace(/\-/g, '\\-').
+                        //    replace(/[/]/g, '\\/').
+                        //    replace(/\./g, '\\.').
+                        //    replace(/\\/g, '\\\\').
+                        //    replace(/\*/g, '\\*').
+                        //    replace(/\+/g, '\\+').
+                        //    replace(/\?/g, '\\?').
+                        //    replace(/\|/g, '\\|');
+
+                        //copy = copy.replace(new RegExp(toReplace, 'g'), evalResult);
+                        copy = copy.split(toReplace).join(evalResult);
+                        
+                    }
+                }
+                else
+                    break;
+            }
+            catch(e)
+            {
+                console.error("SJLForEach error: ", e);
+                break;
+            }
+        }
+
+        //restore [[ and ]]
+        copy = copy.replace(new RegExp("__backOpen__", 'g'), "{{").replace(new RegExp("__backClose__", 'g'), '}}');
+
+        //add the new html to parent of currEl
+        var tempElement = document.createElement("span");
+        tempElement.innerHTML = copy;
+        var tempSJL = $(tempElement.childNodes[0]);
+        parentOfCurrEl.insertBefore(tempElement.childNodes[0], currEl);
+        tempSJL.__processLoops(function(){}, attributesToElements);
+        delete tempElement;
+        
+    }
+    currEl.parentNode.removeChild(currEl);
+    //remove currEl from his parent
     onDone.call(this);
 });
 
@@ -1732,27 +1670,9 @@ SJL.extend(["loadAppFromUrl", "loadActivityFromUrl"], function (onNotLoad, onLoa
         var args = [];
         if (temp.indexOf('/') > 0) {
             args = temp.substr(temp.indexOf('/') + 1, temp.length);
-            var conatainsNames = args.indexOf('=') > -1;
-            args = args.replace(/\?/g, ',');
-            args = args.replace(/\&/g, ',');
             args = args.replace(/\//g, ',');
             args = args.split(',');
             temp = temp.substr(0, temp.indexOf('/'));
-
-            //convert args into an object with names (if url contains variables names)
-            if (conatainsNames){
-                var argsTemp = {}
-                for (var cont = 0; cont < args.length; cont++){
-                    var curr = args[cont];
-                    if (curr.indexOf('=') > -1)
-                        argsTemp[curr.substr(0, curr.indexOf('='))] = curr.substr(curr.indexOf('=') + 1);
-                    else
-                        argsTemp[""+cont+""] = args[cont];
-
-                }
-                console.log("SJL: url args are parsed to an object: ", argsTemp);
-                args = argsTemp;
-            }
         }
 
         if (typeof(_prefixOrFolder_) != 'undefined' )
@@ -1925,21 +1845,18 @@ SJL.extend("setProperty", function (name, value, _try_set_attribute_) {
     if (_try_set_attribute_ == "defValue")
         _try_set_attribute_ = true;
 
-    this.do(function(curr){
+    for (var c in this.elements)
+    {
         if (_try_set_attribute_ == true)
         {
-            if (curr.getAttribute(name) != null)
+            if (this.elements[c].getAttribute(name) != null)
             {
-                //load a new activity
-                if (name.toLowerCase() == "sjlload")
-                    SJL._parseAcNameAndArgsAndLoad(curr, value, function(){}, this);
-                else
-                    curr.setAttribute(name, value);
+                this.elements[c].setAttribute(name, value);
             }
         }
             
-        eval("curr." + name + " = value;");
-    });
+        eval("this.elements[c]." + name + " = value;");
+    }
 
     return this;
 });
@@ -1949,30 +1866,24 @@ SJL.extend("setAttribute", function (name, value, _try_set_property_) {
     if (_try_set_property_ == "defValue")
     _try_set_property_ = true;
 
-    this.do(function(curr){
-
-        if (name.toLowerCase() == "sjlload")
-        {
-            //load a new activity
-            SJL._parseAcNameAndArgsAndLoad(curr, value, function(){}, this);
-        }
-        else{
-            if (_try_set_property_ == true)
-            if (curr.hasOwnProperty(name))
-                eval("curr."+name+" = value;");
+    for (var c in this.elements)
+    {
+        if (_try_set_property_ == true)
+        if (this.elements[c].hasOwnProperty(name))
+            eval("this.elements[c]."+name+" = value;");
             
-            curr.setAttribute(name, value);
-        }
-    });
+        this.elements[c].setAttribute(name, value);
+    }
 
     return this;
 });
 
 SJL.extend("getAttribute", function (name) {
     var ret = [];
-    this.do(function(curr){
-        ret.push(curr.getAttribute(name));
-    });
+    for (var c in this.elements)
+    {
+        ret.push(this.elements[c].getAttribute(name));
+    }
 
     if (ret.length > 1)
         return ret;
@@ -1993,16 +1904,16 @@ SJL.extend("getAttribute", function (name) {
 SJL.extend("getProperty", function (name, _defaultValue_) {
     _defaultValue_ = _defaultValue_ || null;
     var ret = [];
-    this.do(function(curr){
+    for (var c in this.elements) {
         eval("if ("+
-            "curr."+name+"){"+
-                "ret.push(curr." + name + ");"+
+            "this.elements[c]."+name+"){"+
+                "ret.push(this.elements[c]." + name + ");"+
             "} "+
-            "else if (curr.attributes['"+name+"']){"+
-                "ret.push(curr.getAttribute('"+name+"'));"+
+            "else if (this.elements[c].attributes['"+name+"']){"+
+                "ret.push(this.elements[c].getAttribute('"+name+"'));"+
             "}"
         );
-    });
+    }
 
     if (ret.length == 1)
         return ret[0];
@@ -2013,20 +1924,19 @@ SJL.extend("getProperty", function (name, _defaultValue_) {
 });
 
 SJL.extend("setCssProperty", function (property, value) {
-    this.do(function(curr){
-        curr.style.setProperty(property, value);
-    });
+    for (var c in this.elements)
+        this.elements[c].style.setProperty(property, value);
 
     return this;
 });
 
 SJL.extend("getCssProperty", function (property, _defaultValue_) {
     var ret = [];
-    this.do(function(curr){
-        var value = curr.style.getPropertyValue(property);
+    for (var c in this.elements) {
+        var value = this.elements[c].style.getPropertyValue(property);
 
         ret.push(value);
-    });
+    }
 
     if ((ret.length == 1) && (ret[0] != ""))
         return ret[0];
@@ -2038,10 +1948,10 @@ SJL.extend("getCssProperty", function (property, _defaultValue_) {
 
 /** Remove elements from their parent */
 SJL.extend(["remove", "exclude"], function () {
-    this.do(function(curr){
-        curr.parentNode.removeChild(curr);
-        delete curr;
-    });
+    for (var c in this.elements) {
+        this.elements[c].parentNode.removeChild(this.elements[c]);
+        delete this.elements[c];
+    }
 
     return this;
 
@@ -2057,11 +1967,13 @@ SJL.extend(["remove", "exclude"], function () {
 SJL.extend("getComputedCssProperty", function(propertyName, _defaultValue_){
     _defaultValue_ = _defaultValue_ || null;
     var result = [];
-    this.do(function(tempElement){
+    for (var c in this.elements)
+    {
+        var tempElement = this.elements[c];
         var value = null;
         eval ("value = window.getComputedStyle(tempElement)."+propertyName);
         result.push(value);
-    });
+    }
 
     if (result.length == 1)
         return result[0];
@@ -2217,58 +2129,6 @@ SJL.extend(["bindAttribute"], function(evalAddress, attributeName, addressContex
     );
 });
 
-//this methos can be used for waiting for some object is != undefined or null of 
-//until a function returns true. When a object is different of undefined or null or 
-//function returns true, the callback will be called
-SJL.extend(["wait"], function(evalcodeOrFunction, callback, _context_, _checkInterval_){
-    var _checkInterval_ = _checkInterval_ || 10;
-    var waiter = setInterval(function(){
-        var temp = null;
-        try{
-            if (typeof(evalcodeOrFunction) == "function")
-                temp = evalcodeOrFunction.call(_context_);
-            else if (evalcodeOrFunction.constructor == Array)
-            {
-                temp = evalcodeOrFunction.length > 0;
-                
-                evalcodeOrFunction.forEach(function(curr){
-                    if (curr.constructor == Function)
-                    {
-                        temp ==  temp && curr.call(_context_);
-                    }
-                    else
-                    {
-                        var temp2 = eval(curr);
-                        if (temp2)
-                            temp &= temp && true;
-                        else
-                            temp = false;
-                    }
-                });
-            }
-            else
-                temp = eval(evalcodeOrFunction); 
-        }
-        catch(e){
-            //console.error("error in SJL.wait: ", e);
-            temp = false;
-        }
-
-        if (
-                (typeof(temp) != "undefined") && 
-                (temp != null) && 
-                (temp != "undefined") &&
-                (temp != false)
-        )
-        {
-            clearInterval(waiter);
-            callback.call(_context_ || window, temp);
-        }
-        //return temp;
-
-    }, _checkInterval_);
-
-});
 //#endregion
 
 //#region SJLWatch system and SJL starter system
@@ -2384,17 +2244,7 @@ SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _arguments_, _log
                             //checks if the value was changed
                             if (currVal != element.lastValue){
                                 //call de observation function
-                                try{
-                                    element.func.call(element.context, currVal, element.lastValue, element._arguments_);
-                                }
-                                catch(error){
-                                    if (element.stopOnError)
-                                        SJL._watches[currIndex] = null;
-                                    
-                                    if (element.logErrors)
-                                        console.error("Error caught in SJLWatch (calling callback). Watch params: ", element, ". Error: ", error);
-
-                                }
+                                element.func.call(element.context, currVal, element.lastValue, element._arguments_);
 
                                 //update the lastValue (to look for new changes)
                                 element.lastValue = currVal;
@@ -2466,9 +2316,6 @@ SJL.start = function(_conf_){
     
     if (_conf_.usePermanentCache || false)
         SJL.cache.defaultDestination = SJL.cache.destinations.LOCALSTORAGE;
-    else
-        //force cler of cache
-        SJL.cache.clear();
 	
 	if (_conf_.watchInterval)
 		_SJL._watchInterval = _conf_.watchInterval
@@ -2485,338 +2332,4 @@ SJL.start = function(_conf_){
         );
 	};
 };
-//#endregion
-
-//#region others
-//According to the 'compatibility' section of the page https://developer.mozilla.org/pt-BR/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach
-if ( !Array.prototype.forEach ) {
-    Array.prototype.forEach = function(fn, scope) {
-        for(var i = 0, len = this.length; i < len; ++i) {
-        fn.call(scope, this[i], i, this);
-        }
-    };
-}
-
-
-//Very very basic promise implementation for browses that not support it by default. This contains only the 
-//code that allow SJL to work when Promises is not availe (SJL uses promises in somewhere).
-
-
-
-//stack de callbask + stack de respostas
-if (typeof(Promise) == 'undefined')
-{
-    Promise = function(callback)
-    {
-        this._currResult = {}
-        this._thens = [];
-        this._catch = {fcn: null, args: null};
-        this._
-
-        this.then = function(callback, rjCallback){
-            this._thens.push({ac: callback, rj: rjCallback});
-            this._runNextThen();
-
-            return this;
-        };
-
-        this.catch = function(callback){
-            this._catch.fcn = callback;
-            if (this._catch.args)
-                this._catch.fcn.apply(this, this._catch.args);
-        }
-
-        this._runNextThen = function(){
-            try{
-                var _this = this;
-                if (this._currResult.status == "toRun"){
-                    this._currResult.status = "pending";
-                    this._currResult.fcn(function(){
-                        this._currResult.status = "ok";
-                        this._currResult.result.sucess = true;
-                        this._currResult.result.args = arguments;
-                        this._runNextThen();
-                    }.bind(this), function(){
-                        this._currResult.status = "ok";
-                        this._currResult.result.args = arguments;
-                        this._currResult.result.sucess = false;
-                        this._runNextThen();
-                    }.bind(this));
-                }
-                else{
-                    if (this._thens.length > 0)
-                    {
-                        if (this._currResult.status == "ok")
-                        {
-                            var currThen = this._thens[0];
-                            this._thens.splice(0, 1);
-
-                            if (this._currResult.result.sucess)
-                                var result = currThen.ac.apply(this, this._currResult.result.args);
-                            else
-                                var result = currThen.rj.apply(this, this._currResult.result.args);
-
-                            if (result){
-                                if (result.constructor.name == this.constructor.name){
-                                    this._currResult.status = "pending";
-                                    result.then(function(){
-                                        this._currResult.status = "ok";
-                                        this._currResult.result.sucess = true;
-                                        this._currResult.result.args = arguments;
-                                        this._runNextThen();
-                                    }.bind(this), function(){
-                                        this._currResult.status = "ok";
-                                        this._currResult.result.sucess = false;
-                                        this._currResult.result.args = arguments;
-                                        this._runNextThen();
-                                    }.bind(this));
-                                }
-                                else{
-                                    this._currResult.status = "ok";
-                                    this._currResult.result.sucess = true;
-                                    this._currResult.result.args = [result];
-                                    this._runNextThen();
-                                }
-                            }
-                            this._runNextThen();
-                        }
-                    }
-                }
-            }
-            catch(e){
-                this._catch.args = [e];
-                if (this._catch.fcn)
-                    this._catch.fcn.apply(this, this._catch.args);
-            }
-        };
-        
-        this._currResult = {fcn: callback, status: "toRun", result: {sucess: false, returned: null, args: []}};
-        this._runNextThen();
-    }
-}
-//#endregion
-
-//#region auxiliar types and classes
-    //this class monitores an array and call the 'on' function when some element is changed
-    //this class is used in the SJL ProcessLoops function
-    SJL.class_array_looper = function(array, _func_, _ctx_)
-    {
-        this._arr = array
-        this._on = _func_ || function(index, item, action){};
-        this._onCtx = _ctx_ || window;
-        this._running = true;
-        this._oldVec = [];
-
-        this.on =  function(func, ctx){
-            this._on = func;
-            this._onCtx = ctx || window;
-        }
-
-        this.start = function(){
-            this._sjlWatch = new SJL.Watch();
-
-            //start monitoring the size of element
-            var _this = this;
-            this._interval = setInterval(function(){
-                _this._work();
-            }, _SJL._watchInterval);
-
-            this._work();
-        }
-
-        this.stop = function(){
-            this.running = false;
-        }
-
-        this._process = function(element, index, action){
-            try{
-                console.log("Curr action = ", action);
-                this._on.call(this._onCtx, element, index, action);
-            }
-            catch(e){
-                console.error("Error in SJL Array Looper (processing the external event): ", e, this);
-                this.stop();
-            }
-        }
-
-        this._work = function(){
-            try{
-                if (this._running){
-
-                    var tmpArr = this._arr;
-                    if (this._arr.constructor == Function)
-                        tmpArr = this._arr.call(this._onCtx);
-                    else if (this._arr.constructor == String)
-                        tmpArr = (function(){return eval(this._arr)}).call(this._onCtx);
-
-                    //checks if the size of vector as decreased
-                    if (tmpArr.length < this._oldVec.length)
-                    {
-                        for (var c = tmpArr.length; c < this._oldVec.length; c++)
-                        {
-                            this._process(JSON.parse(this._oldVec[c]), c, 'deleted');
-                            this._oldVec.pop();
-                        }
-
-                        
-                    }
-
-                    //checks by changes in the values
-                    tmpArr.forEach(function(currE, index){
-                        if (index >=this._oldVec.length)
-                        {
-                            this._process(currE, index, 'inserted');
-                            this._oldVec.push(JSON.stringify(currE));
-                        }
-                        else if (JSON.stringify(currE) != this._oldVec[index])
-                        {
-                            this._process(currE, index, 'changed');
-                            this._oldVec[index] = JSON.stringify(currE);
-                        }
-                    }, this);
-
-                }
-                else
-                    clearInterval(this._interval);
-            }
-            catch(e){
-                console.error("Error in SJL Array Looper: ", e, this);
-                clearInterval(this._interval);
-            }
-        }
-    }
-
-
-    //this class allow processing whitout freezes the browser. This function was writed to be used 
-    //in critical and automation process and we do not recomend to use it in websites or apps.
-    SJL.Processor = function(_context_, _max_browser_time_lock_)
-    {
-        //by default, the browser must be locked during 30 milliseconds
-        this._max_browser_time_lock = _max_browser_time_lock_ || 30; 
-
-        this._currJobsByCycle = 1;
-        this._running = false;
-        this._context = _context_ || null;
-        this._delayBetweenTasksLots = 0;
-        this._cumulativeTime = 0;
-        this._ciclesCount = 0;
-        this._work = function(callback, endCallback, ctx)
-        {
-            var sDate = new Date();
-            //console.log("this._currJobsByCycle", this._currJobsByCycle);
-            for (var c =0; c < this._currJobsByCycle; c++)
-            {
-                if (this._running)
-                {
-                    this._ciclesCount ++;
-                    callback.call(ctx, this);
-                }
-                else
-                    break;
-            }
-            var eDate = new Date();
-            var totalTime = eDate - sDate;
-
-            this._cumulativeTime += totalTime;
-
-
-            if (totalTime == 0)
-                totalTime = 1;
-            
-            //adjust the currJobsByCycle
-
-            this._currJobsByCycle = this._max_browser_time_lock / (this._cumulativeTime/this._ciclesCount);
-
-            if (this._currJobsByCycle < 0)
-                this._currJobsByCycle = 1;
-            else if (this._currJobsByCycle == Infinity)
-                this._currJobsByCycle = 100000;
-
-            if (this._running){
-                setTimeout(function(_this){
-                    _this._work(callback, endCallback, ctx);
-                }, this._delayBetweenTasksLots, this);
-            }
-            else{
-                if (endCallback)
-                    endCallback.call(ctx, this);
-
-            }
-        }
-
-        this.start = function(callback, endCallback, _context_){
-            endCallback = endCallback || function(){};
-            var workCtx = _context_ || this._context;
-            if (!this._running)
-            {
-                this._ciclesCount = 0;
-                this._cumulativeTime = 0;
-                this._currJobsByCycle = 1;
-                this._running = true;
-
-                this._work(callback , endCallback || function(){}, workCtx);
-            }
-            else
-                throw ("SJL.Processor: already exists a running job. Please, stop it before call 'start'");
-
-            return {then: function(_callback){ endCallback = _callback; }}
-        }
-
-        this.stop = function(){
-            this._running = false;
-        }
-        
-        this.isRunning = function(){
-            return this._running;
-        }
-
-        this.processArray = function(array, callback, _onEndCallback_, _context_)
-        {
-            _onEndCallback_ =_onEndCallback_ || function(){};
-            var i = 0;
-            var _this = this;
-            this.start(function(){
-                if (i < array.length)
-                {
-                    callback.call(_context_ || _this._context, array[i], i, _this);
-                    i++;
-                }
-                else
-                {
-                    _this.stop();
-                }
-
-            }, function(){  
-                if (_onEndCallback_)
-                {
-                    _onEndCallback_.call(_context_ || _this._context, i, _this);
-                }
-            }, _context_ || this._context);
-
-            return {then: function(_callback){ _onEndCallback_ = _callback; }}
-        }
-
-        this.processFor = function(from, to, callback, _onEndCallback_, _context_)
-        {
-            _onEndCallback_ =_onEndCallback_ || function(){};
-            var i = from;
-            var _this = this;
-            this.start(function(){
-                if (i < to)
-                {
-                    callback.call(_context_ || _this._context, i, _this);
-                    i++;
-                }
-                else
-                {
-                    _this.stop();
-                }
-            }, function(){  
-                if (_onEndCallback_)
-                    _onEndCallback_.call(_context_ || _this._context, i, _this);
-            }, _context_);
-
-            return {then: function(_callback){ _onEndCallback_ = _callback; }}
-        }
-    }
 //#endregion
