@@ -1641,6 +1641,9 @@ SJL.extend("__processIf", function(currEl, onDone, attributesToElements){
 
     //get the attribute value
     var attributeValue = currEl.getAttribute("sjlif");
+    //remove the attribute
+    currEl.removeAttribute("sjlif");
+
     var parentOfCurrEl = currEl.parentNode;
     
     //eval the attribute value
