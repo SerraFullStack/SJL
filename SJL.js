@@ -579,18 +579,22 @@ SJL.extend(["includeUsingTags", "loadScriptUsingTags", "scriptUsingTags", "requi
             type = "text/css";
 
 
+        
         if (type == "text/javascript")
         {
             //create the script element
             var script = document.createElement("script");
             //set the src of the new script
+            script.src = scriptsSrc[c];
         }
         else
         {
             var script = document.createElement('link');
             script.rel = "Stylesheet";
+            script.href = scriptsSrc[c];
+
         }
-        script.src = scriptsSrc[c];
+        
         
         //determine the type of the new script
         script.type = type;
@@ -604,6 +608,7 @@ SJL.extend(["includeUsingTags", "loadScriptUsingTags", "scriptUsingTags", "requi
                     onDone.call(_context_ || this);
             }
         };
+        
         //add the new script to DOM. After this, the browser will be load the new script.
         document.head.appendChild(script);
     }
