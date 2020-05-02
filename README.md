@@ -142,12 +142,27 @@ The arguments of this method are:
 
 
 ```javascript
-$(“.allElementsWithThisClass”).include('myScriptFolder/MyScript.js', ()=>{
+SJL.include('myScriptFolder/MyScript.js', ()=>{
     console.log("The file was loaded");
 });
 ```
 
-#### 1.1.1.14) preloadHtml
+#### 1.1.1.14) (OBSOLETE) preload
+WARNING: THIS FUNCTION IS OBSOLETE. PLEASE, USE 'cacheOrGet'
+
+Preload is a usefull method that allow you to force SJL to maintain a certain file in a internal cache system. When you call this file from the server (Ex.: include and loadActivity methods, SJLLoad attribute, ...), the SJL will just give this file from this memory and will not make any request.
+
+```html
+    ...
+    SJL.preload("FileOfMyComponent.html")
+    ...
+    
+    
+    <!-- no one request will be made here, because the FileOfMyComponent already is in the SJL cache system -->
+    <div SJLLOad="FileOfMyComponent"></div>
+    
+```
+
 #### 1.1.1.10) includeUsingTags
 
 
