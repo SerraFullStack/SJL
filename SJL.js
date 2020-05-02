@@ -2218,81 +2218,87 @@ _SJL._watchInterval = 50;
 SJL.Watch = function(varName_Or_GetValueFunc, func, _context_, _arguments_, _logErrors_, _stopOnError_){
     
     //check if the watches system was alrady started. If not, star this
-    if (!SJL._watches)
+    if (!this._watches)
     {
         //creates the vector to contains the observations data
-        SJL._watches = [];
-
-        //create a interval to monitor the variables and call functions
-        setInterval(function(){ //() =>{
-            currIndex = -1;
-			for (var currI in SJL._watches) {
-				var element = SJL._watches[currI];
-                currIndex++;
-                try{
-
-                    if (element != null)
-                    {
-                        var exists = false;
-                        var currVal = null; 
-
-                        //checks if current variable still exists
-                        if (typeof(element.variableOrFunc) == 'function')
-                            exists = true;
-                        else
-                            eval("exists = typeof("+element.variableOrFunc+") != 'undefined'");
-
-                        if (exists){
-                            //get the current value of the variable or return of function
-                            if (typeof(element.variableOrFunc) == 'function')
-                                currVal = element.variableOrFunc.call(element.context, element._arguments_);
-                            else
-                                eval ("currVal = "+element.variableOrFunc);
-
-                            //checks if the value was changed
-                            if (currVal != element.lastValue){
-                                //call de observation function
-                                element.func.call(element.context, currVal, element.lastValue, element._arguments_);
-
-                                //update the lastValue (to look for new changes)
-                                element.lastValue = currVal;
-                            };
-                            element.lastValue = currVal;
-                        }
-                    }
-                }catch(error){
-                    try{
-                        if (element.stopOnError)
-                            SJL._watches[currIndex] = null;
-
-                        if (element.logErrors)
-                            console.error("Error caught in SJLWatch. Watch params: ", element, ". Error: ", error);
-                    }catch(SJLError){
-                        SJL._watches[currIndex] = null;
-                        console.error("SJL Watch internal error: ", SJLError);
-                    }
-                }
-            };
-        }, _SJL._watchInterval);
+        this._watches = [];
+        this._watchesStopped = false;
     }
-
-    this.indexes = [];
 
 
     this.watch = function (varName_Or_GetValueFunc, func, _context_, _arguments_, _logErrors_, _stopOnError_){
         if(typeof(_stopOnError_) == 'undefined')
             _stopOnError_ = true;
+
         _logErrors_ = typeof(_logErrors_) == 'undefined'? true : _logErrors_;
 
-        this.indexes.push(SJL._watches.length);
-        SJL._watches.push({ variableOrFunc: varName_Or_GetValueFunc, func: func, logErrors: _logErrors_, stopOnError: _stopOnError_, lastValue: "---invalid---value---sjl---interval---value", context: _context_ || window, _arguments_: _arguments_ || null});
+        var element = { 
+            variableOrFunc: varName_Or_GetValueFunc, 
+            func: func, 
+            logErrors: _logErrors_, 
+            stopOnError: _stopOnError_, 
+            lastValue: "---invalid---value---sjl---interval---value", 
+            context: _context_ || window, 
+            _arguments_: _arguments_ || null
+        };
+    
+    
+    
+        var interval = setInterval(function(){
+            try{
+                if (this._watchesStopped == true)
+                {
+                    clearInterval(interval);
+                    return;
+                }
+    
+                if (element != null)
+                {
+                    var exists = false;
+                    var currVal = null; 
+    
+                    //checks if current variable still exists
+                    if (typeof(element.variableOrFunc) == 'function')
+                        exists = true;
+                    else
+                        eval("exists = typeof("+element.variableOrFunc+") != 'undefined'");
+    
+                    if (exists){
+                        //get the current value of the variable or return of function
+                        if (typeof(element.variableOrFunc) == 'function')
+                            currVal = element.variableOrFunc.call(element.context, element._arguments_);
+                        else
+                            eval ("currVal = "+element.variableOrFunc);
+    
+                        //checks if the value was changed
+                        if (currVal != element.lastValue){
+                            //call de observation function
+                            element.func.call(element.context, currVal, element.lastValue, element._arguments_);
+    
+                            //update the lastValue (to look for new changes)
+                            element.lastValue = currVal;
+                        };
+                        element.lastValue = currVal;
+                    }
+                }
+            }catch(error){
+                try{
+                    if (element.stopOnError)
+                        clearInterval(interval);
+    
+                    if (element.logErrors)
+                        console.error("Error caught in SJLWatch. Watch params: ", element, ". Error: ", error);
+                }catch(SJLError){
+                    clearInterval(interval);
+                    console.error("SJL Watch internal error: ", SJLError);
+                }
+            }
+    
+        }, _SJL._watchInterval);
     };
 
     this.stop = function(){
-		for (var currI in this.indexes) {
-			var element = this.indexes[currI];
-            SJL._watches[element] = null;
-        };
+        this._watchesStopped = true;
     };
 
     if ((varName_Or_GetValueFunc) && (func))

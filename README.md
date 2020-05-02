@@ -162,10 +162,63 @@ The first thing to be highlited is the instance of loaded component: When SJL lo
 
 #### 1.1.1.16) loadActivity
 
----
+The loadActivity is used to load an component in an html element. There is two ways to use this method:
+
+1) Directly, ba capturing the target element and call the method by its name
+
+```html
+        ...
+            <script type="text/javascript">
+                ...
+                    //capture the element
+                    var element = $("#theTargetElement");
+                    
+                    //load the component
+                    element.loadActivity("MyComponent");
+                ...
+            </script>
+        ...
+        <div id="theTargetElement"></div>
+```
+
+
+2) or by use the special attribute 'SJLLoad'
+```html
+    ...
+        <div SJLload="MyComponent"></div>
+    ...
+```
+
 
 ## 1.3) Other resrouces
 #### 1.1.1.17) callEvent
+To calle vents from a component, you can use the 'callEvent' method of the special property 'html':
+
+the parent html:
+
+```html
+    <div
+        SJLLoad="MyComponent"
+        onmyevent="alert(thetext)"
+    ></div>
+```
+
+in the 'MyComponent.html' component
+
+```html
+    <script type="text/javascript">
+        MyComponent = function(){};
+        
+        MyComponent.prototype.callEvent = function(){
+            //call the event 'onmyevent' in the parent html
+            this.html.callEvent("onmyevent", {thetext: 'this is the text to be displayed'});
+        };
+    </script>
+    <MyComponent>
+        <button onclick="this.MyComponent.callEvent();"/>
+    </MyComponent>
+    
+```
 #### 1.1.1.18) setProperty
 #### 1.1.1.26) bind
 #### 1.1.1.27) bindAttribute
@@ -247,7 +300,7 @@ You can, also, use Promises instread classic callbacks to treat ajax responses.
 
 ## get
 
-Thsi is the more used http verb. To use them with SJL, just follow the 'get'.
+This is the most used http verb. To use them with SJL, just follow the 'get'.
 
 The structure of this method is:
     
