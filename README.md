@@ -119,10 +119,16 @@ The difference between downSpeedAnimate and animate is the function used to get 
 
 #### 1.1.1.19) setAttribute
 
-This method allow you to set attributes of HTML elements
+This method allow you to set attributes of HTML elements. This function is shortcut to setAttribute of javascript
+
+```javascript
+    //this line will force SJL to load the component "mycomponent" in the "#myElement" element.
+    $("#myElement").setAttribute("sjlload", "mycomponent");
+```
 
 #### 1.1.1.20) getProperty
 #### 1.1.1.21) setCssProperty
+
 #### 1.1.1.22) getCssProperty
 #### 1.1.1.23) getComputedCssProperty
 #### 1.1.1.24) download
@@ -263,6 +269,34 @@ in the 'MyComponent.html' component
 ### SJL COMPONENT STRUCTURE AND COMPONENT LIFE CYCLE
 
 A sjl component is composed by a javascript code, a css code and a html code.
+The basic structure of a component is:
+
+```html
+//file myComponent.html
+<script type="text/javascript">
+    myComponent = function(){};
+    
+    myComponent._onButtonClick= function(){
+        /* this example assumes tehre is a parent element with an attribute callled eventOnparentElement:
+         *  <div SJLLoad="myComponent" eventOnParentElement="alert('arguments are: '+arg1+' and '+arg2);"></div>
+        */
+        this.html.callEvent("eventOnParentElement", {arg1: "value1, arg2: "value2"});
+    };
+</script>
+<style type="text/css">
+    myComponent{
+    
+    }
+    
+    myComponent button{
+    
+    }
+</style>
+<myComponent>
+    <!-- all component elements contains a property with same name of the component, that is a handle to component instance -->
+    <button onclick="this.myComponent._onButtonClick();">Click or press here</button>
+</myComponent>
+```
 
 #### Javascript
 	
