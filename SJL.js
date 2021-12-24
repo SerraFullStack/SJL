@@ -796,6 +796,23 @@ SJL.extend(["loadHtmlText", "setHtmlText"], function (htmlText, onLoad, _clearHt
 
     if ((typeof(_clearHtml_) == 'undefined') || (_clearHtml_ == true))
     {
+
+        //TODO: Check for apps and unload them
+        var childs = []
+        
+        this.do(function(curr){
+            childs.push(curr.getElementsByTagName("*"));
+        });
+    
+        for (c = 0; c < childs.length; c++)
+        {
+            var curr = childs[c];
+            if ((curr.hasOwnProperty("SJL_CurrAPP") && curr.SJL_CurrAPP != null))
+            {
+                curr.SJL_CurrAPP.unloadApp();
+            }
+        };
+
         this.setProperty("innerHTML", "");
     }
 
@@ -1047,6 +1064,12 @@ SJL.extend("getValue", function () {
 SJL.extend(["unloadApp", "unloadActivity", "unloadActiveComponent"], function (onUnload, _context_, _args_, _clearHtml_) {
 
     var app = this.elements[0].SJL_CurrAPP;
+    //check if app is already unloaded
+    if (app != null && typeof(app.__unloaded__) != 'undefined' && app.__unloaded__ == true)
+    {
+        app = null;
+    }
+
     var elementP = this.elements[0];
     var _this = this;
     _args_ = _args_ || null;
@@ -1055,6 +1078,9 @@ SJL.extend(["unloadApp", "unloadActivity", "unloadActiveComponent"], function (o
         
     if (app != null)
     {
+        //determine that app is unloaded
+        app.__unloaded__ = true;
+
         if (typeof(app.destructor) != 'undefined')
             app.destructor();
         if (typeof(app.stop) != 'undefined')
